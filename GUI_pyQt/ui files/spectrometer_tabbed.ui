@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>852</width>
-    <height>626</height>
+    <width>489</width>
+    <height>339</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,7 +30,7 @@
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab_sample">
        <attribute name="title">
@@ -162,11 +162,14 @@
           <property name="autoFillBackground">
            <bool>false</bool>
           </property>
+          <property name="text">
+           <string/>
+          </property>
           <property name="readOnly">
            <bool>true</bool>
           </property>
           <property name="placeholderText">
-           <string/>
+           <string>No Data File location selected!</string>
           </property>
           <property name="clearButtonEnabled">
            <bool>false</bool>
@@ -397,6 +400,48 @@
            <string>Save Sequence</string>
           </property>
          </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="tab_expt">
+       <attribute name="title">
+        <string>Experiment</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_8">
+        <item row="0" column="0">
+         <widget class="QLabel" name="selectSeqLbl">
+          <property name="font">
+           <font>
+            <pointsize>12</pointsize>
+           </font>
+          </property>
+          <property name="text">
+           <string>Select Sequence</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="3" column="0">
+         <widget class="QLabel" name="selectedSeqLbl">
+          <property name="text">
+           <string>No Sequence Loaded!</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="0">
+         <widget class="QPushButton" name="browseSeqBtn">
+          <property name="text">
+           <string>Browse</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLineEdit" name="selectSeqLineEdit"/>
         </item>
        </layout>
       </widget>

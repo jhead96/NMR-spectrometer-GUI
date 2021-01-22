@@ -8,7 +8,7 @@ class RunApp(Ui_mainWindow):
 
         self.setupUi(window)
         self.clearAllBtn.clicked.connect(self.clear_txt)
-        self.loadSeqBtn.clicked.connect(self.load_file)
+        self.loadSeqBtn.clicked.connect(self.load_seq_file)
         self.saveSeqBtn.clicked.connect(self.save_file)
         self.sampleTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabNextBtn.clicked.connect(self.next_tab)
@@ -25,7 +25,7 @@ class RunApp(Ui_mainWindow):
         # Reset phase combo box
         self.phaseComboBox.setCurrentIndex(0)
 
-    def load_file(self):
+    def load_seq_file(self):
         # Open file dialog
         load_filepath = QtWidgets.QFileDialog.getOpenFileName()
         # Read file name of sequence
@@ -51,7 +51,7 @@ class RunApp(Ui_mainWindow):
             self.phaseComboBox.setCurrentIndex(3)
 
     # noinspection PyTypeChecker
-    def save_file(self):
+    def save_seq_file(self):
         # Get save data filepath using windows dialog
         save_file_name = QtWidgets.QFileDialog.getSaveFileName(filter="seq files (*.seq)")
         # Combine data from text-boxes into array
@@ -74,6 +74,12 @@ class RunApp(Ui_mainWindow):
         current_index = self.mainTab.currentIndex()
         prev_index = current_index - 1
         self.mainTab.setCurrentIndex(prev_index)
+
+    def gen_data_file(self):
+        sample_name = self.sampleNameLineEdit
+        sample_mass = self.sampleMassLineEdit
+        data_file_name = self.dataFileNameLineEdit
+
 
 
 app = QtWidgets.QApplication(sys.argv)
