@@ -13,6 +13,9 @@ class RunApp(Ui_mainWindow):
         self.sampleTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
+        # Fix name
+        self.pushButton.clicked.connect(self.gen_data_file)
+
 
     def clear_txt(self):
         # Clear all text boxes
@@ -76,10 +79,18 @@ class RunApp(Ui_mainWindow):
         self.mainTab.setCurrentIndex(prev_index)
 
     def gen_data_file(self):
-        sample_name = self.sampleNameLineEdit
-        sample_mass = self.sampleMassLineEdit
-        data_file_name = self.dataFileNameLineEdit
 
+        sample_name = self.sampleNameLineEdit.text()
+        sample_mass = self.sampleMassLineEdit.text()
+        data_filepath = QtWidgets.QFileDialog.getSaveFileName()
+        self.dataFileLineEdit.setText(data_filepath[0])
+        # Write header
+        f = open(data_filepath[0], "w+")
+        f.write("[HEADER]\n")
+        f.write("SAMPLE NAME, {}\n".format(sample_name))
+        f.write("SAMPLE MASS (mg), {}\n".format(sample_mass))
+        f.write("[Data]\n")
+        f.close()
 
 
 app = QtWidgets.QApplication(sys.argv)
