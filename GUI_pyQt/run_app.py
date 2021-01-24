@@ -9,7 +9,7 @@ class RunApp(Ui_mainWindow):
         self.setupUi(window)
         self.clearAllBtn.clicked.connect(self.clear_txt)
         self.loadSeqBtn.clicked.connect(self.load_seq_file)
-        self.saveSeqBtn.clicked.connect(self.save_file)
+        self.saveSeqBtn.clicked.connect(self.save_seq_file)
         self.sampleTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
