@@ -16,7 +16,6 @@ class RunApp(Ui_mainWindow):
         # Fix name
         self.pushButton.clicked.connect(self.gen_data_file)
 
-
     def clear_txt(self):
         # Clear all text boxes
         self.frequencyLineEdit.setText('')
