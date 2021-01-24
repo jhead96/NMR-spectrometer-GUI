@@ -7,6 +7,8 @@ class RunApp(Ui_mainWindow):
     def __init__(self, window):
 
         self.setupUi(window)
+        self.dataFileGenerateLbl.setHidden(True)
+
         self.clearAllBtn.clicked.connect(self.clear_txt)
         self.loadSeqBtn.clicked.connect(self.load_seq_file)
         self.saveSeqBtn.clicked.connect(self.save_seq_file)
@@ -14,7 +16,7 @@ class RunApp(Ui_mainWindow):
         self.seqTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
         # Fix name
-        self.pushButton.clicked.connect(self.gen_data_file)
+        self.genDataFileBtn.clicked.connect(self.gen_data_file)
 
     def clear_txt(self):
         # Clear all text boxes
@@ -82,7 +84,7 @@ class RunApp(Ui_mainWindow):
         sample_name = self.sampleNameLineEdit.text()
         sample_mass = self.sampleMassLineEdit.text()
         data_filepath = QtWidgets.QFileDialog.getSaveFileName()
-        self.dataFileLineEdit.setText(data_filepath[0])
+        self.SaveFileLocLineEdit.setText(data_filepath[0])
         # Write header
         f = open(data_filepath[0], "w+")
         f.write("[HEADER]\n")
@@ -90,6 +92,7 @@ class RunApp(Ui_mainWindow):
         f.write("SAMPLE MASS (mg), {}\n".format(sample_mass))
         f.write("[Data]\n")
         f.close()
+        self.dataFileGenerateLbl.setHidden(False)
 
 
 app = QtWidgets.QApplication(sys.argv)
