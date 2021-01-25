@@ -15,7 +15,6 @@ class RunApp(Ui_mainWindow):
         self.sampleTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
-        # Fix name
         self.genDataFileBtn.clicked.connect(self.gen_data_file)
 
     def clear_txt(self):
