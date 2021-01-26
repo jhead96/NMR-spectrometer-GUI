@@ -17,6 +17,8 @@ class RunApp(Ui_mainWindow):
         self.seqTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
         self.genDataFileBtn.clicked.connect(self.gen_data_file)
+        self.addSeqBtn.clicked.connect(self.add_seq_to_chain)
+        self.removeSeqBtn.clicked.connect(self.remove_seq_from_chain)
 
     def clear_txt(self):
         # Clear all text boxes
@@ -93,6 +95,27 @@ class RunApp(Ui_mainWindow):
         f.write("[Data]\n")
         f.close()
         self.dataFileGenerateLbl.setHidden(False)
+
+    def add_seq_to_chain(self):
+        # Open file dialog
+        load_filepath = QtWidgets.QFileDialog.getOpenFileName()
+        # Read file name of sequence
+        load_filename = load_filepath[0].split('/')[-1]
+        # Add data to tree widget [FILEPATH, REPEATS] (repeats = 1 by default)
+        item = QtWidgets.QTreeWidgetItem(self.chainTreeWidget, [load_filename, '1'])
+        self.chainTreeWidget.addTopLevelItem(item)
+
+    def remove_seq_from_chain(self):
+        # Check for selected items
+        selected_item = self.chainTreeWidget.selectedItems()
+        # If an item is selected
+        if selected_item:
+            # Get selected node
+            baseNode = selected_item[0]
+            # Get index of selected node
+            index = self.chainTreeWidget.indexFromItem(baseNode)
+            # Delete selected node
+            self.chainTreeWidget.takeTopLevelItem(index.row())
 
 
 app = QtWidgets.QApplication(sys.argv)
