@@ -7,8 +7,15 @@ class RunApp(Ui_mainWindow):
     def __init__(self, window):
 
         self.setupUi(window)
+
+        # Can this stuff be changed in qtdesigner
         self.dataFileGenerateLbl.setHidden(True)
         self.mainTab.setCurrentIndex(0)
+        self.textEdit.setReadOnly(True)
+        self.font = QtGui.QFont()
+        self.font.setPointSize(12)
+        self.textEdit.setFont(self.font)
+
 
         self.clearAllBtn.clicked.connect(self.clear_txt)
         self.loadSeqBtn.clicked.connect(self.load_seq_file)
@@ -19,6 +26,9 @@ class RunApp(Ui_mainWindow):
         self.genDataFileBtn.clicked.connect(self.gen_data_file)
         self.addSeqBtn.clicked.connect(self.add_seq_to_chain)
         self.removeSeqBtn.clicked.connect(self.remove_seq_from_chain)
+        self.chainTreeWidget.itemDoubleClicked.connect(self.display_seq)
+
+        self.default_seq_filepath = 'sequences\\'
 
     def clear_txt(self):
         # Clear all text boxes
@@ -33,7 +43,7 @@ class RunApp(Ui_mainWindow):
 
     def load_seq_file(self):
         # Open file dialog
-        load_filepath = QtWidgets.QFileDialog.getOpenFileName()
+        load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
         # Read file name of sequence
         load_filename = load_filepath[0].split('/')[-1]
         # Set loaded file textbox
@@ -98,7 +108,7 @@ class RunApp(Ui_mainWindow):
 
     def add_seq_to_chain(self):
         # Open file dialog
-        load_filepath = QtWidgets.QFileDialog.getOpenFileName()
+        load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
         # Read file name of sequence
         load_filename = load_filepath[0].split('/')[-1]
         # Add data to tree widget [FILEPATH, REPEATS] (repeats = 1 by default)
@@ -116,7 +126,33 @@ class RunApp(Ui_mainWindow):
             index = self.chainTreeWidget.indexFromItem(baseNode)
             # Delete selected node
             self.chainTreeWidget.takeTopLevelItem(index.row())
+            self.textEdit.clear()
 
+    def display_seq(self, selected_item, col):
+
+        # Read name from QTreeWidget
+        name = selected_item.text(col)
+        # Construct full filepath
+        seq_path = self.default_seq_filepath + name
+        # Load sequence data
+        seq_data = np.loadtxt(seq_path)
+        # Clear textEdit
+        self.textEdit.clear()
+
+        test = 'Sequence data for ' + name + ' </br><style>table, td{{border: 1px solid black;' \
+                                                    'border-collapse: collapse;text-align:center}}</style><table>' \
+                                                    '<tr><th>Parameter</th><th>Value</th></tr>' \
+                                                    '<tr><td>Frequency (MHz)</td><td>{}</td></tr>' \
+                                                    '<tr><td>Phase</td><td>{}</td></tr>' \
+                                                    '<tr><td>Pulse 1 length (ns)</td><td>{}</td></tr>' \
+                                                    '<tr><td>Pulse 2 length (ns)</td><td>{}</td></tr>' \
+                                                    '<tr><td>Gap length (ns)</td><td>{}</td></tr>' \
+                                                    '<tr><td>Record length (ns)</td><td>{}</td></tr>' \
+                                                    '</table>'.format(seq_data[0], seq_data[1],
+                                                                      seq_data[2], seq_data[3],
+                                                                      seq_data[4], seq_data[5])
+
+        self.textEdit.setHtml(test)
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
