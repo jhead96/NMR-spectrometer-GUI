@@ -8,6 +8,7 @@ class RunApp(Ui_mainWindow):
 
         self.setupUi(window)
         self.dataFileGenerateLbl.setHidden(True)
+        self.mainTab.setCurrentIndex(0)
 
         self.clearAllBtn.clicked.connect(self.clear_txt)
         self.loadSeqBtn.clicked.connect(self.load_seq_file)
