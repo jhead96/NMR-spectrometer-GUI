@@ -1,6 +1,7 @@
 from gui_2 import *
 import sys
 import numpy as np
+import ADQ_tools_lite
 
 class RunApp(Ui_mainWindow):
 
@@ -27,6 +28,15 @@ class RunApp(Ui_mainWindow):
         self.addSeqBtn.clicked.connect(self.add_seq_to_chain)
         self.removeSeqBtn.clicked.connect(self.remove_seq_from_chain)
         self.chainTreeWidget.itemDoubleClicked.connect(self.display_seq)
+        self.function1Btn.clicked.connect(self.run_seq)
+
+        self.device = ADQ_tools_lite.sdr14()
+
+        #self.reg = [(1, int(3e6)), (2, int(10e3)), (3, int(20e3)), (5, int(10e3)), (7, int(50e3)), (0, 1)]
+        #for i in self.reg:
+            #self.device.reg_write(*i)
+
+        #self.device.delete_cu()
 
         self.default_seq_filepath = 'sequences\\'
 
@@ -153,6 +163,41 @@ class RunApp(Ui_mainWindow):
                                                                       seq_data[4], seq_data[5])
 
         self.textEdit.setHtml(test)
+
+    def run_seq(self):
+
+        # Get number of sequences in TreeWidget
+        num_seq = self.chainTreeWidget.topLevelItemCount()
+
+        # If TreeWidget is empty show error messagebox
+        if num_seq == 0:
+            msg_text = 'No sequences selected in \'chain\' tab!'
+            self.show_dialog(msg_text)
+        else:
+            # Get names from TreeWidget
+
+
+            # filename1 = self.chainTreeWidget.topLevelItem(0)
+            # filename2 = self.chainTreeWidget.topLevelItem(1)
+
+        print(num_seq)
+
+       # print(filename1.text(0))
+       # print(filename2.text(0))
+
+    #    for i in self.reg:
+    #        self.device.reg_write(*i)
+
+    #    self.device.delete_cu()
+
+
+    def show_dialog(self, msg_text):
+
+        msgbox = QtWidgets.QMessageBox()
+        msgbox.setText(msg_text)
+        msgbox.setWindowTitle("Warning")
+        msgbox.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msgbox.exec()
 
 app = QtWidgets.QApplication(sys.argv)
 MainWindow = QtWidgets.QMainWindow()
