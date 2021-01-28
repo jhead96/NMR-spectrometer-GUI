@@ -39,6 +39,7 @@ class RunApp(Ui_mainWindow):
         #self.device.delete_cu()
 
         self.default_seq_filepath = 'sequences\\'
+        self.num_parameters = 6
 
     def clear_txt(self):
         # Clear all text boxes
@@ -174,16 +175,29 @@ class RunApp(Ui_mainWindow):
             msg_text = 'No sequences selected in \'chain\' tab!'
             self.show_dialog(msg_text)
         else:
-            # Get names from TreeWidget
 
+             # Get names from TreeWidget
+            seq_filenames = np.empty(num_seq, dtype=object)
 
-            # filename1 = self.chainTreeWidget.topLevelItem(0)
-            # filename2 = self.chainTreeWidget.topLevelItem(1)
+            for i in range(num_seq):
+                item = self.chainTreeWidget.topLevelItem(i)
+                seq_filenames[i] = self.default_seq_filepath + item.text(0)
+                print(seq_filenames[i])
 
-        print(num_seq)
+            # Read data from files
+            parameter_values = np.zeros((self.num_parameters, num_seq))
 
-       # print(filename1.text(0))
-       # print(filename2.text(0))
+            for i in range(num_seq):
+                parameter_values[:, i] = np.loadtxt(seq_filenames[i])
+                print(parameter_values)
+
+            parameter_values = np.delete(parameter_values, 1, 0)
+
+            print(parameter_values)
+
+            # Construct reg tuples
+            regs_to_write = np.array([1, 2, 3, 5, 7])
+
 
     #    for i in self.reg:
     #        self.device.reg_write(*i)
