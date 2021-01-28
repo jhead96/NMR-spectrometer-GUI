@@ -30,7 +30,7 @@ class RunApp(Ui_mainWindow):
         self.chainTreeWidget.itemDoubleClicked.connect(self.display_seq)
         self.function1Btn.clicked.connect(self.run_seq)
 
-        self.device = ADQ_tools_lite.sdr14()
+        #self.device = ADQ_tools_lite.sdr14()
 
         #self.reg = [(1, int(3e6)), (2, int(10e3)), (3, int(20e3)), (5, int(10e3)), (7, int(50e3)), (0, 1)]
         #for i in self.reg:
@@ -189,14 +189,24 @@ class RunApp(Ui_mainWindow):
 
             for i in range(num_seq):
                 parameter_values[:, i] = np.loadtxt(seq_filenames[i])
-                print(parameter_values)
 
+            # Delete phase variable for debug purposes
             parameter_values = np.delete(parameter_values, 1, 0)
-
-            print(parameter_values)
-
             # Construct reg tuples
-            regs_to_write = np.array([1, 2, 3, 5, 7])
+            regs_to_update = np.array([1, 2, 3, 5, 7])
+
+             #### BROKEN
+            reg_vals = np.empty((self.num_parameters-1, num_seq), dtype=tuple)
+
+            for i in range(num_seq):
+                for j in range(self.num_parameters - 1):
+                    # Generate
+                    pair = (regs_to_update[j], parameter_values[j, i])
+                    print(pair)
+
+                    reg_vals[j, i] = pair
+            #######
+
 
 
     #    for i in self.reg:
