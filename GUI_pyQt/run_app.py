@@ -185,27 +185,28 @@ class RunApp(Ui_mainWindow):
                 print(seq_filenames[i])
 
             # Read data from files
-            parameter_values = np.zeros((self.num_parameters, num_seq))
+            parameter_values = np.zeros(self.num_parameters)
 
             for i in range(num_seq):
-                parameter_values[:, i] = np.loadtxt(seq_filenames[i])
+                data = np.loadtxt(seq_filenames[i])
+                parameter_values = np.vstack((parameter_values, data))
 
-            # Delete phase variable for debug purposes
-            parameter_values = np.delete(parameter_values, 1, 0)
+
+            # Delete first row of array
+            parameter_values = np.delete(parameter_values, 0, axis=0)
+
+            # Delete phase for debugging purposes
+            parameter_values = np.delete(parameter_values, 1, axis=1)
+
             # Construct reg tuples
             regs_to_update = np.array([1, 2, 3, 5, 7])
-
-             #### BROKEN
-            reg_vals = np.empty((self.num_parameters-1, num_seq), dtype=tuple)
-
-            for i in range(num_seq):
-                for j in range(self.num_parameters - 1):
+            reg_vals = np.empty((regs_to_update.size, num_seq), dtype=tuple)
+            for i in range(regs_to_update.size):
+                for j in range(num_seq):
                     # Generate
-                    pair = (regs_to_update[j], parameter_values[j, i])
-                    print(pair)
+                    pair = (regs_to_update[i], parameter_values[j, i])
+                    reg_vals[i, j] = pair
 
-                    reg_vals[j, i] = pair
-            #######
 
 
 
