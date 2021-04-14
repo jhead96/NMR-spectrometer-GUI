@@ -325,6 +325,18 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                                              self.reg_cache[register]))
         return conf
 
+    def enable_dev(self):
+        """
+        Enable device by writing 1 to the PC_Enable register (0).
+        """
+        self.reg_write(0, 1)
+
+    def disable_dev(self):
+        """
+        Disable device by writing 0 to the PC_Enable register (0).
+        """
+        self.reg_write(0, 0)
+
     def reg_read(self, register, quiet=None):
         """
         Read value from a specified user register. Also updates local cache

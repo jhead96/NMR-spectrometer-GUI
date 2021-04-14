@@ -1,6 +1,7 @@
 from gui_2 import *
 import sys
 import numpy as np
+import time
 import ADQ_tools_lite
 
 class RunApp(Ui_mainWindow):
@@ -9,7 +10,7 @@ class RunApp(Ui_mainWindow):
 
         self.setupUi(window)
 
-        # Can this stuff be changed in qtdesigner
+        # Can this stuff be changed in qtdesigner?
         self.dataFileGenerateLbl.setHidden(True)
         self.mainTab.setCurrentIndex(0)
         self.textEdit.setReadOnly(True)
@@ -30,11 +31,11 @@ class RunApp(Ui_mainWindow):
         self.chainTreeWidget.itemDoubleClicked.connect(self.display_seq)
         self.function1Btn.clicked.connect(self.run_seq)
 
-        #self.device = ADQ_tools_lite.sdr14()
+        self.device = ADQ_tools_lite.sdr14()
 
         #self.reg = [(1, int(3e6)), (2, int(10e3)), (3, int(20e3)), (5, int(10e3)), (7, int(50e3)), (0, 1)]
         #for i in self.reg:
-            #self.device.reg_write(*i)
+          #  self.device.reg_write(*i)
 
         #self.device.delete_cu()
 
@@ -143,27 +144,32 @@ class RunApp(Ui_mainWindow):
 
         # Read name from QTreeWidget
         name = selected_item.text(col)
-        # Construct full filepath
-        seq_path = self.default_seq_filepath + name
-        # Load sequence data
-        seq_data = np.loadtxt(seq_path)
-        # Clear textEdit
-        self.textEdit.clear()
 
-        test = 'Sequence data for ' + name + ' </br><style>table, td{{border: 1px solid black;' \
-                                                    'border-collapse: collapse;text-align:center}}</style><table>' \
-                                                    '<tr><th>Parameter</th><th>Value</th></tr>' \
-                                                    '<tr><td>Frequency (MHz)</td><td>{}</td></tr>' \
-                                                    '<tr><td>Phase</td><td>{}</td></tr>' \
-                                                    '<tr><td>Pulse 1 length (ns)</td><td>{}</td></tr>' \
-                                                    '<tr><td>Pulse 2 length (ns)</td><td>{}</td></tr>' \
-                                                    '<tr><td>Gap length (ns)</td><td>{}</td></tr>' \
-                                                    '<tr><td>Record length (ns)</td><td>{}</td></tr>' \
-                                                    '</table>'.format(seq_data[0], seq_data[1],
-                                                                      seq_data[2], seq_data[3],
-                                                                      seq_data[4], seq_data[5])
+        # Replace try with check for file existing!
+        try:
+            # Construct full filepath
+            seq_path = self.default_seq_filepath + name
+            # Load sequence data
+            seq_data = np.loadtxt(seq_path)
+            # Clear textEdit
+            self.textEdit.clear()
 
-        self.textEdit.setHtml(test)
+            seq_text = 'Sequence data for ' + name + ' </br><style>table, td{{border: 1px solid black;' \
+                                                        'border-collapse: collapse;text-align:center}}</style><table>' \
+                                                        '<tr><th>Parameter</th><th>Value</th></tr>' \
+                                                        '<tr><td>Frequency (MHz)</td><td>{}</td></tr>' \
+                                                        '<tr><td>Phase</td><td>{}</td></tr>' \
+                                                        '<tr><td>Pulse 1 length (ns)</td><td>{}</td></tr>' \
+                                                        '<tr><td>Pulse 2 length (ns)</td><td>{}</td></tr>' \
+                                                        '<tr><td>Gap length (ns)</td><td>{}</td></tr>' \
+                                                        '<tr><td>Record length (ns)</td><td>{}</td></tr>' \
+                                                        '</table>'.format(seq_data[0], seq_data[1],
+                                                                          seq_data[2], seq_data[3],
+                                                                          seq_data[4], seq_data[5])
+
+            self.textEdit.setHtml(seq_text)
+        except:
+            print('Error - click sequence name to display sequence parameters!')
 
     def run_seq(self):
 
@@ -175,20 +181,19 @@ class RunApp(Ui_mainWindow):
             msg_text = 'No sequences selected in \'chain\' tab!'
             self.show_dialog(msg_text)
         else:
-
              # Get names from TreeWidget
             seq_filenames = np.empty(num_seq, dtype=object)
 
             for i in range(num_seq):
                 item = self.chainTreeWidget.topLevelItem(i)
                 seq_filenames[i] = self.default_seq_filepath + item.text(0)
-                print(seq_filenames[i])
+                #print(seq_filenames[i])
 
             # Read data from files
             parameter_values = np.zeros(self.num_parameters)
 
-            for i in range(num_seq):
-                data = np.loadtxt(seq_filenames[i])
+            for seq_name in seq_filenames:
+                data = np.loadtxt(seq_name)
                 parameter_values = np.vstack((parameter_values, data))
 
 
@@ -198,22 +203,35 @@ class RunApp(Ui_mainWindow):
             # Delete phase for debugging purposes
             parameter_values = np.delete(parameter_values, 1, axis=1)
 
-            # Construct reg tuples
+            # Construct 2D array of reg tuples - (reg_number, value)
             regs_to_update = np.array([1, 2, 3, 5, 7])
             reg_vals = np.empty((regs_to_update.size, num_seq), dtype=tuple)
             for i in range(regs_to_update.size):
                 for j in range(num_seq):
                     # Generate
-                    pair = (regs_to_update[i], parameter_values[j, i])
+                    pair = (regs_to_update[i], int(parameter_values[j, i]))
                     reg_vals[i, j] = pair
 
+            print(reg_vals[:,0])
 
+            # Write values to device
+            for i in range(num_seq):
+                reg = reg_vals[:, i]
+                for j in reg:
+                    self.device.reg_write(*j)
+                self.device.enable_dev()
+                print('Device enabled with register vales: ' + str(reg))
+                time.sleep(10)
+                self.device.disable_dev()
+                print('Device disabled')
 
+            #self.device.delete_cu()
 
-    #    for i in self.reg:
-    #        self.device.reg_write(*i)
+            # Enable device
 
-    #    self.device.delete_cu()
+            #    for i in self.reg:
+            #        self.device.reg_write(*i)
+
 
 
     def show_dialog(self, msg_text):
