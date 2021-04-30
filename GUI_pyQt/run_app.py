@@ -2,6 +2,8 @@ from gui_2 import *
 import sys
 import numpy as np
 import time
+import os
+
 import ADQ_tools_lite
 
 class RunApp(Ui_mainWindow):
@@ -25,13 +27,14 @@ class RunApp(Ui_mainWindow):
         self.sampleTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
-        self.genDataFileBtn.clicked.connect(self.gen_data_file)
+        self.genDataFileBtn.clicked.connect(self.get_sample_info)
         self.addSeqBtn.clicked.connect(self.add_seq_to_chain)
         self.removeSeqBtn.clicked.connect(self.remove_seq_from_chain)
         self.chainTreeWidget.itemDoubleClicked.connect(self.display_seq)
         self.function1Btn.clicked.connect(self.run_seq)
+        self.function2Btn.clicked.connect(self.create_data_directory)
 
-        self.device = ADQ_tools_lite.sdr14()
+        #self.device = ADQ_tools_lite.sdr14()
 
         #self.reg = [(1, int(3e6)), (2, int(10e3)), (3, int(20e3)), (5, int(10e3)), (7, int(50e3)), (0, 1)]
         #for i in self.reg:
@@ -39,7 +42,14 @@ class RunApp(Ui_mainWindow):
 
         #self.device.delete_cu()
 
+        # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
+        self.default_data_filepath = 'data\\'
+
+        # Initialise sample parameters
+        self.sample_name = ''
+        self.sample_mass = 0.0
+
         self.num_parameters = 6
 
     def clear_txt(self):
@@ -103,20 +113,36 @@ class RunApp(Ui_mainWindow):
         prev_index = current_index - 1
         self.mainTab.setCurrentIndex(prev_index)
 
-    def gen_data_file(self):
+    def get_sample_info(self):
 
-        sample_name = self.sampleNameLineEdit.text()
-        sample_mass = self.sampleMassLineEdit.text()
-        data_filepath = QtWidgets.QFileDialog.getSaveFileName()
-        self.SaveFileLocLineEdit.setText(data_filepath[0])
-        # Write header
-        f = open(data_filepath[0], "w+")
-        f.write("[HEADER]\n")
-        f.write("SAMPLE NAME, {}\n".format(sample_name))
-        f.write("SAMPLE MASS (mg), {}\n".format(sample_mass))
-        f.write("[Data]\n")
-        f.close()
-        self.dataFileGenerateLbl.setHidden(False)
+        def is_float(value):
+            try:
+                float(value)
+                return True
+            except ValueError:
+                return False
+
+        # Initialise valid flags
+        name_valid = True
+        mass_valid = True
+
+        # Read sample information from text-boxes
+        name = self.sampleNameLineEdit.text()
+        mass = self.sampleMassLineEdit.text()
+
+        # Check input sample name is valid
+        if name == '':
+            self.show_dialog('Invalid sample name!')
+            name_valid = False
+        # Check input sample mass is valid
+        if not is_float(mass):
+            self.show_dialog('Invalid sample mass!')
+            mass_valid = False
+
+        # If inputs are valid update variables
+        if name_valid and mass_valid:
+            self.sample_name = name
+            self.sample_mass = float(mass)
 
     def add_seq_to_chain(self):
         # Open file dialog
@@ -225,14 +251,18 @@ class RunApp(Ui_mainWindow):
                 self.device.disable_dev()
                 print('Device disabled')
 
-            #self.device.delete_cu()
+    def create_data_directory(self):
 
-            # Enable device
+        # Construct directory path
+        dir_path = self.default_data_filepath + self.sample_name
 
-            #    for i in self.reg:
-            #        self.device.reg_write(*i)
-
-
+        # Check if sample name has been changed from default
+        if self.sample_name != "":
+            # Check if directory already exists
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+        else:
+            self.show_dialog("No sample name has been saved!")
 
     def show_dialog(self, msg_text):
 
