@@ -199,6 +199,9 @@ class RunApp(Ui_mainWindow):
 
     def run_seq(self):
 
+        # Generate directory to hold output data files
+        self.create_data_directory()
+
         # Get number of sequences in TreeWidget
         num_seq = self.chainTreeWidget.topLevelItemCount()
 
@@ -207,14 +210,17 @@ class RunApp(Ui_mainWindow):
             msg_text = 'No sequences selected in \'chain\' tab!'
             self.show_dialog(msg_text)
         else:
-             # Get names from TreeWidget
+            # Get names from TreeWidget
             seq_filenames = np.empty(num_seq, dtype=object)
 
             for i in range(num_seq):
                 item = self.chainTreeWidget.topLevelItem(i)
-                seq_filenames[i] = self.default_seq_filepath + item.text(0)
-                #print(seq_filenames[i])
+                seq_name = item.text(0)
+                # Generate data file for each sequence
+                self.create_data_file(seq_name[:-4])
+                seq_filenames[i] = self.default_seq_filepath + seq_name
 
+        """
             # Read data from files
             parameter_values = np.zeros(self.num_parameters)
 
@@ -250,6 +256,7 @@ class RunApp(Ui_mainWindow):
                 time.sleep(10)
                 self.device.disable_dev()
                 print('Device disabled')
+        """
 
     def create_data_directory(self):
 
@@ -263,6 +270,23 @@ class RunApp(Ui_mainWindow):
                 os.makedirs(dir_path)
         else:
             self.show_dialog("No sample name has been saved!")
+
+    def create_data_file(self, seq_name):
+        # Construct file path
+        file_path = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name + '.txt'
+        print(file_path)
+
+        # Create data file
+        f = open(file_path, "w+")
+
+        # Write header
+        f.write("[HEADER]\n")
+        f.write("SAMPLE NAME, {}\n".format(self.sample_name))
+        f.write("SAMPLE MASS (mg), {}\n".format(self.sample_mass))
+        f.write("SEQUENCE, {}\n".format(seq_name))
+        f.write("[Data]\n")
+        f.close()
+
 
     def show_dialog(self, msg_text):
 
