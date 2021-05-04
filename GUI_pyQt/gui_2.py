@@ -11,8 +11,12 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 
+
 class Ui_mainWindow(object):
     def setupUi(self, mainWindow):
+
+        # Set up dialog
+
         mainWindow.setObjectName("mainWindow")
         mainWindow.resize(542, 599)
         mainWindow.setAnimated(True)

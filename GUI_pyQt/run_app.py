@@ -11,6 +11,7 @@ class RunApp(Ui_mainWindow):
     def __init__(self, window):
 
         self.setupUi(window)
+        self.dialog = QtWidgets.QInputDialog()
 
         # Can this stuff be changed in qtdesigner?
         self.dataFileGenerateLbl.setHidden(True)
@@ -149,9 +150,15 @@ class RunApp(Ui_mainWindow):
         load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
         # Read file name of sequence
         load_filename = load_filepath[0].split('/')[-1]
+        # Get number of repeats
+        repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'getText', 'Enter text')
+
         # Add data to tree widget [FILEPATH, REPEATS] (repeats = 1 by default)
-        item = QtWidgets.QTreeWidgetItem(self.chainTreeWidget, [load_filename, '1'])
-        self.chainTreeWidget.addTopLevelItem(item)
+        if valid and repeats > 0:
+            item = QtWidgets.QTreeWidgetItem(self.chainTreeWidget, [load_filename, str(repeats)])
+            self.chainTreeWidget.addTopLevelItem(item)
+        else:
+            self.show_dialog('Invalid entry!')
 
     def remove_seq_from_chain(self):
         # Check for selected items
@@ -168,34 +175,40 @@ class RunApp(Ui_mainWindow):
 
     def display_seq(self, selected_item, col):
 
-        # Read name from QTreeWidget
-        name = selected_item.text(col)
+        print(col)
 
-        # Replace try with check for file existing!
-        try:
-            # Construct full filepath
-            seq_path = self.default_seq_filepath + name
-            # Load sequence data
-            seq_data = np.loadtxt(seq_path)
-            # Clear textEdit
-            self.textEdit.clear()
+        if col == 0:
+            # Read name from QTreeWidget
+            name = selected_item.text(col)
 
-            seq_text = 'Sequence data for ' + name + ' </br><style>table, td{{border: 1px solid black;' \
-                                                        'border-collapse: collapse;text-align:center}}</style><table>' \
-                                                        '<tr><th>Parameter</th><th>Value</th></tr>' \
-                                                        '<tr><td>Frequency (MHz)</td><td>{}</td></tr>' \
-                                                        '<tr><td>Phase</td><td>{}</td></tr>' \
-                                                        '<tr><td>Pulse 1 length (ns)</td><td>{}</td></tr>' \
-                                                        '<tr><td>Pulse 2 length (ns)</td><td>{}</td></tr>' \
-                                                        '<tr><td>Gap length (ns)</td><td>{}</td></tr>' \
-                                                        '<tr><td>Record length (ns)</td><td>{}</td></tr>' \
-                                                        '</table>'.format(seq_data[0], seq_data[1],
-                                                                          seq_data[2], seq_data[3],
-                                                                          seq_data[4], seq_data[5])
+            # Replace try with check for file existing!
+            try:
+                # Construct full filepath
+                seq_path = self.default_seq_filepath + name
+                # Load sequence data
+                seq_data = np.loadtxt(seq_path)
+                # Clear textEdit
+                self.textEdit.clear()
 
-            self.textEdit.setHtml(seq_text)
-        except:
-            print('Error - click sequence name to display sequence parameters!')
+                seq_text = 'Sequence data for ' + name + ' </br><style>table, td{{border: 1px solid black;' \
+                                                            'border-collapse: collapse;text-align:center}}</style><table>' \
+                                                            '<tr><th>Parameter</th><th>Value</th></tr>' \
+                                                            '<tr><td>Frequency (MHz)</td><td>{}</td></tr>' \
+                                                            '<tr><td>Phase</td><td>{}</td></tr>' \
+                                                            '<tr><td>Pulse 1 length (ns)</td><td>{}</td></tr>' \
+                                                            '<tr><td>Pulse 2 length (ns)</td><td>{}</td></tr>' \
+                                                            '<tr><td>Gap length (ns)</td><td>{}</td></tr>' \
+                                                            '<tr><td>Record length (ns)</td><td>{}</td></tr>' \
+                                                            '</table>'.format(seq_data[0], seq_data[1],
+                                                                              seq_data[2], seq_data[3],
+                                                                              seq_data[4], seq_data[5])
+
+                self.textEdit.setHtml(seq_text)
+            except:
+                print('Error!')
+
+        elif col == 1:
+            print('Sequence number clicked')
 
     def run_seq(self):
 
@@ -219,6 +232,10 @@ class RunApp(Ui_mainWindow):
                 # Generate data file for each sequence
                 self.create_data_file(seq_name[:-4])
                 seq_filenames[i] = self.default_seq_filepath + seq_name
+
+        # Handle repeats
+
+
 
         """
             # Read data from files
@@ -286,7 +303,6 @@ class RunApp(Ui_mainWindow):
         f.write("SEQUENCE, {}\n".format(seq_name))
         f.write("[Data]\n")
         f.close()
-
 
     def show_dialog(self, msg_text):
 
