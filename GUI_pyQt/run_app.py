@@ -151,7 +151,7 @@ class RunApp(Ui_mainWindow):
         # Read file name of sequence
         load_filename = load_filepath[0].split('/')[-1]
         # Get number of repeats
-        repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'getText', 'Enter text')
+        repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats')
 
         # Add data to tree widget [FILEPATH, REPEATS] (repeats = 1 by default)
         if valid and repeats > 0:
@@ -223,18 +223,23 @@ class RunApp(Ui_mainWindow):
             msg_text = 'No sequences selected in \'chain\' tab!'
             self.show_dialog(msg_text)
         else:
-            # Get names from TreeWidget
+            # Get sequence names and number of repeats from TreeWidget
             seq_filenames = np.empty(num_seq, dtype=object)
+            num_reps = np.empty(num_seq)
 
             for i in range(num_seq):
+                # Get each item in TreeWidget
                 item = self.chainTreeWidget.topLevelItem(i)
                 seq_name = item.text(0)
+                repeats = item.text(1)
+
                 # Generate data file for each sequence
                 self.create_data_file(seq_name[:-4])
+
+                # Add filenames to array
                 seq_filenames[i] = self.default_seq_filepath + seq_name
-
-        # Handle repeats
-
+                # Add number of repeats to array
+                num_reps[i] = int(repeats)
 
 
         """
@@ -261,18 +266,30 @@ class RunApp(Ui_mainWindow):
                     pair = (regs_to_update[i], int(parameter_values[j, i]))
                     reg_vals[i, j] = pair
 
-            print(reg_vals[:,0])
 
-            # Write values to device
+
             for i in range(num_seq):
+                # Get reg values and number of repeats for sequence i
                 reg = reg_vals[:, i]
-                for j in reg:
-                    self.device.reg_write(*j)
-                self.device.enable_dev()
-                print('Device enabled with register vales: ' + str(reg))
-                time.sleep(10)
-                self.device.disable_dev()
-                print('Device disabled')
+                reps = num_reps[i]
+                # Initialise k
+                k = 0
+                # Loop for number of repeats
+                while k < reps:
+                     # Write reg values to device
+                    for j in reg:
+                        self.device.reg_write(*j)
+                    # Enable device
+                    self.device.enable_dev()
+                    print('Device enabled with register vales: ' + str(reg))
+                    print('Experiment number: {}'.format(k+1))
+                    time.sleep(10)
+                    # Disable device
+                    self.device.disable_dev()
+                    print('Device disabled')
+                    # Increment k
+                    k += 1
+            print('Experiments finished!')
         """
 
     def create_data_directory(self):
