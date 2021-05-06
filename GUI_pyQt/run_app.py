@@ -35,13 +35,12 @@ class RunApp(Ui_mainWindow):
         self.function1Btn.clicked.connect(self.run_seq)
         self.function2Btn.clicked.connect(self.create_data_directory)
 
-        #self.device = ADQ_tools_lite.sdr14()
+        try:
+            self.device = ADQ_tools_lite.sdr14()
+        except IOError:
+            self.device = None
+            print('No device connected!')
 
-        #self.reg = [(1, int(3e6)), (2, int(10e3)), (3, int(20e3)), (5, int(10e3)), (7, int(50e3)), (0, 1)]
-        #for i in self.reg:
-          #  self.device.reg_write(*i)
-
-        #self.device.delete_cu()
 
         # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
@@ -241,7 +240,7 @@ class RunApp(Ui_mainWindow):
                 # Add number of repeats to array
                 num_reps[i] = int(repeats)
 
-            """
+
        
             # Read data from files
             parameter_values = np.zeros(self.num_parameters)
@@ -287,10 +286,11 @@ class RunApp(Ui_mainWindow):
                     # Disable device
                     self.device.disable_dev()
                     print('Device disabled')
+                    time.sleep(5)
                     # Increment k
                     k += 1
             print('Experiments finished!')
-        """
+
 
     def create_data_directory(self):
 
