@@ -234,15 +234,15 @@ class RunApp(Ui_mainWindow):
                 repeats = item.text(1)
 
                 # Generate data file for each sequence
-                self.create_data_file(seq_name[:-4])
+                self.create_data_file(seq_name[:-4], int(repeats))
 
                 # Add filenames to array
                 seq_filenames[i] = self.default_seq_filepath + seq_name
                 # Add number of repeats to array
                 num_reps[i] = int(repeats)
 
-
-        """
+            """
+       
             # Read data from files
             parameter_values = np.zeros(self.num_parameters)
 
@@ -305,21 +305,30 @@ class RunApp(Ui_mainWindow):
         else:
             self.show_dialog("No sample name has been saved!")
 
-    def create_data_file(self, seq_name):
-        # Construct file path
-        file_path = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name + '.txt'
-        print(file_path)
+    def create_data_file(self, seq_name, rep):
 
-        # Create data file
-        f = open(file_path, "w+")
+        # Initialise loop variable
+        i = 0
 
-        # Write header
-        f.write("[HEADER]\n")
-        f.write("SAMPLE NAME, {}\n".format(self.sample_name))
-        f.write("SAMPLE MASS (mg), {}\n".format(self.sample_mass))
-        f.write("SEQUENCE, {}\n".format(seq_name))
-        f.write("[Data]\n")
-        f.close()
+        # Repeat for number of repeats
+        while i < rep:
+            # Construct file path (data/sample name/sample name + seq name + expt number.txt)
+            file_path = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name + '_expt{}'.format(i+1) +'.txt'
+            print(file_path)
+
+            # Create data file
+            f = open(file_path, "w+")
+
+            # Write header
+            f.write("[HEADER]\n")
+            f.write("SAMPLE NAME, {}\n".format(self.sample_name))
+            f.write("SAMPLE MASS (mg), {}\n".format(self.sample_mass))
+            f.write("SEQUENCE, {}\n".format(seq_name))
+            f.write("EXPERIMENT NUMBER, {}\n".format(i+1))
+            f.write("[Data]\n")
+            f.close()
+
+            i += 1
 
     def show_dialog(self, msg_text):
 
