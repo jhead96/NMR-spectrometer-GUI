@@ -3,8 +3,51 @@ import sys
 import numpy as np
 import time
 import os
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 import ADQ_tools_lite
+
+class Worker(QObject):
+    # Finished signal
+    finished = pyqtSignal()
+
+    def __init__(self, device, reg_vals, num_reps):
+        super().__init__()
+        self.device = device
+        self.reg_vals = reg_vals
+        self.num_reps = num_reps
+        self.num_seqs = np.size(num_reps)
+
+    def run_expt(self):
+
+        for i in range(self.num_seqs):
+            # Get reg values and number of repeats for sequence i
+            reg = self.reg_vals[:, i]
+            reps = self.num_reps[i]
+            # Initialise k
+            k = 0
+            # Loop for number of repeats
+            while k < reps:
+                # Write reg values to device
+                for j in reg:
+                    self.device.reg_write(*j)
+                # Enable device
+                self.device.enable_dev()
+                print('Device enabled with register vales: ' + str(reg))
+                print('Experiment number: {}'.format(k + 1))
+                time.sleep(10)
+                # Disable device
+                self.device.disable_dev()
+                print('Device disabled')
+                time.sleep(5)
+                # Increment k
+                k += 1
+
+        print('Experiment finished')
+        # Emit finished signal
+        self.finished.emit()
+
+
 
 class RunApp(Ui_mainWindow):
 
@@ -211,6 +254,8 @@ class RunApp(Ui_mainWindow):
 
     def run_seq(self):
 
+
+
         # Generate directory to hold output data files
         self.create_data_directory()
 
@@ -264,9 +309,8 @@ class RunApp(Ui_mainWindow):
                     # Generate
                     pair = (regs_to_update[i], int(parameter_values[j, i]))
                     reg_vals[i, j] = pair
-
-
-
+            """
+            # Multi thread this bit ----------------------------------------------------
             for i in range(num_seq):
                 # Get reg values and number of repeats for sequence i
                 reg = reg_vals[:, i]
@@ -275,7 +319,7 @@ class RunApp(Ui_mainWindow):
                 k = 0
                 # Loop for number of repeats
                 while k < reps:
-                     # Write reg values to device
+                    # Write reg values to device
                     for j in reg:
                         self.device.reg_write(*j)
                     # Enable device
@@ -290,6 +334,30 @@ class RunApp(Ui_mainWindow):
                     # Increment k
                     k += 1
             print('Experiments finished!')
+            # ------------------------------------------------------------------------------
+            """
+
+
+            # Multi threading code to run experiment --------------------------------------------------------
+
+            # Create QThread object
+            self.thread = QThread()
+            # Create Worker instance
+            self.worker = Worker(self.device, reg_vals, num_reps)
+            # Move worker to thread
+            self.worker.moveToThread(self.thread)
+            # Connect signals and slots
+            self.thread.started.connect(self.worker.run_expt)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.thread.finished.connect(self.thread.deleteLater)
+            # Start thread
+            self.thread.start()
+
+            # Disable button while running
+            self.function1Btn.setEnabled(False)
+            # On thread finished re-enable button.
+            self.thread.finished.connect(lambda: self.function1Btn.setEnabled(True))
 
 
     def create_data_directory(self):

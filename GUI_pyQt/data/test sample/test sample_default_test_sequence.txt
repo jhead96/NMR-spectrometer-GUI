@@ -1,5 +1,0 @@
-[HEADER]
-SAMPLE NAME, test sample
-SAMPLE MASS (mg), 1.0
-SEQUENCE, default_test_sequence
-[Data]
