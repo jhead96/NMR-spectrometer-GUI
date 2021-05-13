@@ -1,6 +1,7 @@
-from gui_2 import *
+from gui_3 import *
 import sys
 import numpy as np
+import matplotlib.pyplot as plt
 import time
 import os
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -8,8 +9,11 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal
 import ADQ_tools_lite
 
 class Worker(QObject):
+    # Worker class to handle interfacing with SDR14 on separate thread.
+
     # Finished signal
     finished = pyqtSignal()
+    data_out = pyqtSignal(object,object)
 
     def __init__(self, device, reg_vals, num_reps):
         super().__init__()
@@ -31,25 +35,38 @@ class Worker(QObject):
                 # Write reg values to device
                 for j in reg:
                     self.device.reg_write(*j)
+
                 # Enable device
                 self.device.enable_dev()
-                print('Device enabled with register vales: ' + str(reg))
-                print('Experiment number: {}'.format(k + 1))
+                # Start MR acquisition
+                ch1_data, ch2_data = self.device.MR_acquisition()
+                self.data_out.emit(ch1_data, ch2_data)
+                # print('Device enabled with register vales: ' + str(reg))
+                # print('Experiment number: {}'.format(k + 1))
+
                 time.sleep(10)
                 # Disable device
                 self.device.disable_dev()
+                self.device.disable_dev()
+
                 print('Device disabled')
                 time.sleep(5)
                 # Increment k
                 k += 1
 
         print('Experiment finished')
+
         # Emit finished signal
         self.finished.emit()
 
 
+    def save_data_to_file(self, filepath):
+
+        pass
+
 
 class RunApp(Ui_mainWindow):
+    # Class to handle running the GUI.
 
     def __init__(self, window):
 
@@ -57,27 +74,41 @@ class RunApp(Ui_mainWindow):
         self.dialog = QtWidgets.QInputDialog()
 
         # Can this stuff be changed in qtdesigner?
-        self.dataFileGenerateLbl.setHidden(True)
         self.mainTab.setCurrentIndex(0)
-        self.textEdit.setReadOnly(True)
+        self.exptTextEdit.setReadOnly(True)
         self.font = QtGui.QFont()
         self.font.setPointSize(12)
-        self.textEdit.setFont(self.font)
+        self.exptTextEdit.setFont(self.font)
 
+        # Connect buttons to functions
 
+        # Sample tab
+        self.confirmSampleInfoBtn.clicked.connect(self.get_sample_info)
+        self.sampleTabNextBtn.clicked.connect(self.next_tab)
+        self.clearSampleInfoBtn.clicked.connect(self.clear_sample_info)
+
+        # Sequence tab
         self.clearAllBtn.clicked.connect(self.clear_txt)
         self.loadSeqBtn.clicked.connect(self.load_seq_file)
         self.saveSeqBtn.clicked.connect(self.save_seq_file)
-        self.sampleTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabNextBtn.clicked.connect(self.next_tab)
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
-        self.genDataFileBtn.clicked.connect(self.get_sample_info)
+
+        # Experiment tab
         self.addSeqBtn.clicked.connect(self.add_seq_to_chain)
         self.removeSeqBtn.clicked.connect(self.remove_seq_from_chain)
-        self.chainTreeWidget.itemDoubleClicked.connect(self.display_seq)
-        self.function1Btn.clicked.connect(self.run_seq)
-        self.function2Btn.clicked.connect(self.create_data_directory)
+        self.editSeqBtn.clicked.connect(self.edit_seq)
+        self.exptTreeWidget.itemDoubleClicked.connect(self.display_seq)
 
+        # Run tab
+        self.runExptBtn.clicked.connect(self.run_seq)
+
+
+        # Data tab
+        self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
+
+
+        # Check for SDR14 connection
         try:
             self.device = ADQ_tools_lite.sdr14()
         except IOError:
@@ -89,11 +120,14 @@ class RunApp(Ui_mainWindow):
         self.default_seq_filepath = 'sequences\\'
         self.default_data_filepath = 'data\\'
 
+        # Initialise data file cache
+        self.data_file_cache = []
         # Initialise sample parameters
         self.sample_name = ''
         self.sample_mass = 0.0
 
         self.num_parameters = 6
+
 
     def clear_txt(self):
         # Clear all text boxes
@@ -184,8 +218,24 @@ class RunApp(Ui_mainWindow):
 
         # If inputs are valid update variables
         if name_valid and mass_valid:
+            # Update internal sample variables
             self.sample_name = name
             self.sample_mass = float(mass)
+
+            # Update labels
+            self.currentSampleNameLbl.setText('Current sample name: {}'.format(self.sample_name))
+            self.currentSampleMassLbl.setText('Current sample mass: {} mg'.format(self.sample_mass))
+
+    def clear_sample_info(self):
+        # Reset internal sample variables
+        self.sample_name = ""
+        self.sample_mass = 0.0
+        # Reset labels
+        self.currentSampleNameLbl.setText('Current sample name: No sample entered!')
+        self.currentSampleMassLbl.setText('Current sample mass: No sample entered!')
+        # Clear textboxes
+        self.sampleNameLineEdit.setText("")
+        self.sampleMassLineEdit.setText("")
 
     def add_seq_to_chain(self):
         # Open file dialog
@@ -197,27 +247,40 @@ class RunApp(Ui_mainWindow):
 
         # Add data to tree widget [FILEPATH, REPEATS] (repeats = 1 by default)
         if valid and repeats > 0:
-            item = QtWidgets.QTreeWidgetItem(self.chainTreeWidget, [load_filename, str(repeats)])
-            self.chainTreeWidget.addTopLevelItem(item)
+            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, [load_filename, str(repeats)])
+            self.exptTreeWidget.addTopLevelItem(item)
         else:
             self.show_dialog('Invalid entry!')
 
     def remove_seq_from_chain(self):
         # Check for selected items
-        selected_item = self.chainTreeWidget.selectedItems()
+        selected_item = self.exptTreeWidget.selectedItems()
         # If an item is selected
         if selected_item:
             # Get selected node
             baseNode = selected_item[0]
             # Get index of selected node
-            index = self.chainTreeWidget.indexFromItem(baseNode)
+            index = self.exptTreeWidget.indexFromItem(baseNode)
             # Delete selected node
-            self.chainTreeWidget.takeTopLevelItem(index.row())
-            self.textEdit.clear()
+            self.exptTreeWidget.takeTopLevelItem(index.row())
+            self.exptTextEdit.clear()
+
+    def edit_seq(self):
+        # Check for selected items
+        selected_item = self.exptTreeWidget.selectedItems()
+
+        # If an item is selected
+        if selected_item:
+            # Get node from tree
+            node = selected_item[0]
+            # Get new value for repeats
+            repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats')
+
+            if valid and repeats > 0:
+                # Write to tree
+                node.setText(1,'{}'.format(repeats))
 
     def display_seq(self, selected_item, col):
-
-        print(col)
 
         if col == 0:
             # Read name from QTreeWidget
@@ -230,7 +293,7 @@ class RunApp(Ui_mainWindow):
                 # Load sequence data
                 seq_data = np.loadtxt(seq_path)
                 # Clear textEdit
-                self.textEdit.clear()
+                self.exptTextEdit.clear()
 
                 seq_text = 'Sequence data for ' + name + ' </br><style>table, td{{border: 1px solid black;' \
                                                             'border-collapse: collapse;text-align:center}}</style><table>' \
@@ -245,7 +308,7 @@ class RunApp(Ui_mainWindow):
                                                                               seq_data[2], seq_data[3],
                                                                               seq_data[4], seq_data[5])
 
-                self.textEdit.setHtml(seq_text)
+                self.exptTextEdit.setHtml(seq_text)
             except:
                 print('Error!')
 
@@ -253,18 +316,17 @@ class RunApp(Ui_mainWindow):
             print('Sequence number clicked')
 
     def run_seq(self):
-
-
-
         # Generate directory to hold output data files
         self.create_data_directory()
 
+        # Parse TreeWidget ----------------------------------------------------------------------
+
         # Get number of sequences in TreeWidget
-        num_seq = self.chainTreeWidget.topLevelItemCount()
+        num_seq = self.exptTreeWidget.topLevelItemCount()
 
         # If TreeWidget is empty show error messagebox
         if num_seq == 0:
-            msg_text = 'No sequences selected in \'chain\' tab!'
+            msg_text = 'No sequences selected in \'Experiment\' tab!'
             self.show_dialog(msg_text)
         else:
             # Get sequence names and number of repeats from TreeWidget
@@ -273,7 +335,7 @@ class RunApp(Ui_mainWindow):
 
             for i in range(num_seq):
                 # Get each item in TreeWidget
-                item = self.chainTreeWidget.topLevelItem(i)
+                item = self.exptTreeWidget.topLevelItem(i)
                 seq_name = item.text(0)
                 repeats = item.text(1)
 
@@ -285,7 +347,7 @@ class RunApp(Ui_mainWindow):
                 # Add number of repeats to array
                 num_reps[i] = int(repeats)
 
-
+            # Reformat data from .seq files ----------------------------------------------------------------
        
             # Read data from files
             parameter_values = np.zeros(self.num_parameters)
@@ -293,7 +355,6 @@ class RunApp(Ui_mainWindow):
             for seq_name in seq_filenames:
                 data = np.loadtxt(seq_name)
                 parameter_values = np.vstack((parameter_values, data))
-
 
             # Delete first row of array
             parameter_values = np.delete(parameter_values, 0, axis=0)
@@ -309,34 +370,6 @@ class RunApp(Ui_mainWindow):
                     # Generate
                     pair = (regs_to_update[i], int(parameter_values[j, i]))
                     reg_vals[i, j] = pair
-            """
-            # Multi thread this bit ----------------------------------------------------
-            for i in range(num_seq):
-                # Get reg values and number of repeats for sequence i
-                reg = reg_vals[:, i]
-                reps = num_reps[i]
-                # Initialise k
-                k = 0
-                # Loop for number of repeats
-                while k < reps:
-                    # Write reg values to device
-                    for j in reg:
-                        self.device.reg_write(*j)
-                    # Enable device
-                    self.device.enable_dev()
-                    print('Device enabled with register vales: ' + str(reg))
-                    print('Experiment number: {}'.format(k+1))
-                    time.sleep(10)
-                    # Disable device
-                    self.device.disable_dev()
-                    print('Device disabled')
-                    time.sleep(5)
-                    # Increment k
-                    k += 1
-            print('Experiments finished!')
-            # ------------------------------------------------------------------------------
-            """
-
 
             # Multi threading code to run experiment --------------------------------------------------------
 
@@ -350,14 +383,28 @@ class RunApp(Ui_mainWindow):
             self.thread.started.connect(self.worker.run_expt)
             self.worker.finished.connect(self.thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
+            self.worker.data_out.connect(self.plot_data)
             self.thread.finished.connect(self.thread.deleteLater)
             # Start thread
             self.thread.start()
 
             # Disable button while running
-            self.function1Btn.setEnabled(False)
+            self.runExptBtn.setEnabled(False)
             # On thread finished re-enable button.
-            self.thread.finished.connect(lambda: self.function1Btn.setEnabled(True))
+            self.thread.finished.connect(lambda: self.runExptBtn.setEnabled(True))
+
+
+
+    def plot_data(self, ch1_data, ch2_data):
+        plt.plot(ch1_data)
+        plt.plot(ch2_data)
+        """
+        test_filepath = "data\\test_datafile.txt"
+        save_data = np.stack((ch1_data, ch2_data), axis=1)
+
+        with open(test_filepath, "ab") as f:
+            np.savetxt(f, save_data, header='Ch 1 data, Ch 2 data', comments='', delimiter=',')
+        """
 
 
     def create_data_directory(self):
@@ -378,12 +425,16 @@ class RunApp(Ui_mainWindow):
         # Initialise loop variable
         i = 0
 
+        # Reset data file cache
+        self.data_file_cache = []
+
         # Repeat for number of repeats
         while i < rep:
             # Construct file path (data/sample name/sample name + seq name + expt number.txt)
             file_path = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name + '_expt{}'.format(i+1) +'.txt'
             print(file_path)
-
+            # Add to cache
+            self.data_file_cache.append(file_path)
             # Create data file
             f = open(file_path, "w+")
 
@@ -394,9 +445,30 @@ class RunApp(Ui_mainWindow):
             f.write("SEQUENCE, {}\n".format(seq_name))
             f.write("EXPERIMENT NUMBER, {}\n".format(i+1))
             f.write("[Data]\n")
+            f.write("\n")
             f.close()
 
             i += 1
+
+    def get_data_directory(self):
+        # Get folder
+        directory_path = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select data folder')
+        # Update textbox
+        self.currentDataFolder.setText(directory_path.split('/')[-1])
+
+        # Read data files from folder
+        data_filenames = os.listdir(directory_path)
+
+        # Remove .txt for combo box display name
+        display_names = []
+        for filename in data_filenames:
+            display_names.append(filename.split('.')[0])
+
+        # Clear combo box
+        self.datafileCombobox.clear()
+
+        # Add names to combo box
+        self.datafileCombobox.addItems(display_names)
 
     def show_dialog(self, msg_text):
 
@@ -406,7 +478,14 @@ class RunApp(Ui_mainWindow):
         msgbox.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msgbox.exec()
 
+
+def close_GUI():
+    # Remove connection to SDR-14
+    ui.device.delete_cu()
+
 app = QtWidgets.QApplication(sys.argv)
+# Handle application close
+app.aboutToQuit.connect(close_GUI)
 MainWindow = QtWidgets.QMainWindow()
 ui = RunApp(MainWindow)
 MainWindow.show()

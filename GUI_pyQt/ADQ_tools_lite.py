@@ -417,6 +417,8 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
             self.total_nof_buffers = 10000
             self.records_fetched = 0
             self.overflows = 0
+            self.num_of_records = 1
+            self.samples_per_record = 65536
 
         def get_config(self):
             """
@@ -470,6 +472,88 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                 return False, 0  # halt status and exit code for setup
             except ValueError:
                 return True, 50  # halt status and exit code for setup
+
+    def set_clock_source(self):
+        # Set clock source to internal clock
+        ADQ_CLK_SOURCE = 0
+        clk_set = self.__api.ADQ_SetClockSource(self.__cu, self.device_number, ADQ_CLK_SOURCE)
+        if clk_set:
+            print('Clock source set to 0 (internal clock)')
+
+    def set_trigger_mode(self):
+        # Set trigger to software trigger
+        trigger = 1
+        trig_set = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, trigger)
+        if trig_set:
+            print('Trigger set to software trigger')
+        else:
+            print('Failed to set trigger')
+
+    def set_MR_settings(self):
+        # Setup SDR-14 for MultiRecord acquisition
+        num_records = self.stream_cfg_data.num_of_records
+        samples_per_record = self.stream_cfg_data.samples_per_record
+
+        MR_set = self.__api.ADQ_MultiRecordSetup(self.__cu, self.device_number, num_records, samples_per_record)
+        if MR_set:
+            print('MultiRecord parameters set \n'
+                  'Number of records: {}\n'
+                  'Samples per record: {}'.format(num_records, samples_per_record))
+
+    def arm_MR_trigger(self):
+        # Deactivate trigger
+        self.__api.ADQ_DisarmTrigger(self.__cu, self.device_number)
+        trig_armed = self.__api.ADQ_ArmTrigger(self.__cu, self.device_number)
+        if trig_armed:
+            print('Trigger armed')
+
+    def MR_acquisition(self):
+
+        # Initialise streaming parameters
+        #  self.set_clock_source()
+
+        self.set_trigger_mode()
+        self.set_MR_settings()
+
+        # Arm trigger
+        self.arm_MR_trigger()
+
+        # Acquire data
+        while self.__api.ADQ_GetAcquiredAll(self.__cu, self.device_number) == 0:
+            trig_on = self.__api.ADQ_SWTrig(self.__cu, self.device_number)
+            if trig_on:
+                print('Trigger activated')
+        print('Data acquisition successful')
+
+        # Set up buffers for data
+        max_channels = 2
+        target_buffers = (ct.POINTER(
+            ct.c_int16 * self.stream_cfg_data.samples_per_record * self.stream_cfg_data.num_of_records) * max_channels)()
+
+        for buf_pntr in target_buffers:
+            buf_pntr.contents = (
+                        ct.c_int16 * self.stream_cfg_data.samples_per_record * self.stream_cfg_data.num_of_records)()
+
+        # Get data from ADQ
+        ADQ_TRANSFER_MODE = 0  # Default mode
+        ADQ_CHANNELS_MASK = 0x3  # Read from both channels
+
+        status = self.__api.ADQ_GetData(self.__cu, self.device_number, target_buffers,
+                                        self.stream_cfg_data.samples_per_record * self.stream_cfg_data.num_of_records,
+                                        2, 0, self.stream_cfg_data.num_of_records, ADQ_CHANNELS_MASK,
+                                        0, self.stream_cfg_data.samples_per_record, ADQ_TRANSFER_MODE)
+        if status:
+            print('Data retrieved successfully')
+
+        ch1_data = np.frombuffer(target_buffers[0].contents[0], dtype=np.int16)
+        ch2_data = np.frombuffer(target_buffers[1].contents[0], dtype=np.int16)
+
+        # Disarm trigger and close MR mode
+        self.__api.ADQ_DisarmTrigger(self.__cu, self.device_number)
+        self.__api.ADQ_MultiRecordClose(self.__cu, self.device_number)
+
+        return ch1_data, ch2_data
+
 
     def get_data_setup(self,
                        write_to_file=None,
