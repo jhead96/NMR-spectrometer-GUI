@@ -9,7 +9,9 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal
 import ADQ_tools_lite
 
 class Worker(QObject):
-    # Worker class to handle interfacing with SDR14 on separate thread.
+    """
+    Class to handle interfacing with the SDR14 on a Worker thread.
+    """
 
     # Finished signal
     finished = pyqtSignal()
@@ -29,6 +31,10 @@ class Worker(QObject):
 
 
     def run_expt(self):
+        """
+        Runs an experiment on the SDR14 using the parameters entered on the 'Experiment' tab of the GUI.
+        Saves 1 record of data from the SDR14 using the MultiRecord mode to a text file.
+        """
 
         for i in range(self.num_seqs):
             # Get reg values and number of repeats for sequence i
@@ -73,6 +79,9 @@ class Worker(QObject):
         self.finished.emit()
 
     def save_data_to_file(self, filepath, ch1_data, ch2_data):
+        """
+        Saves data from the SDR14 to a text file.
+        """
         save_data = np.stack((ch1_data, ch2_data), axis=1)
 
         with open(filepath, "ab") as f:
@@ -80,11 +89,16 @@ class Worker(QObject):
             f.close()
 
     def clear_console(self):
+        """
+        Function that clears the Python console.
+        """
         clear = "\n" * 100
         print(clear)
 
 class RunApp(Ui_mainWindow):
-    # Class to handle running the GUI.
+    """
+    Class to handle operation of the GUI on the main thread.
+    """
 
     def __init__(self, window):
 
@@ -146,6 +160,9 @@ class RunApp(Ui_mainWindow):
 
 
     def clear_txt(self):
+        """
+        Clears all text-boxes on the 'Sequence' tab.
+        """
         # Clear all text boxes
         self.frequencyLineEdit.setText('')
         self.pulse1LenLineEdit.setText('')
@@ -157,6 +174,9 @@ class RunApp(Ui_mainWindow):
         self.phaseComboBox.setCurrentIndex(0)
 
     def load_seq_file(self):
+        """
+        Loads values from the designated sequence file into the 'Sequence' tab for editing.
+        """
         # Open file dialog
         load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
         # Read file name of sequence
@@ -183,6 +203,9 @@ class RunApp(Ui_mainWindow):
 
     # noinspection PyTypeChecker
     def save_seq_file(self):
+        """
+        Saves sequence values from the 'Sequence' tab into a .seq file.
+        """
         # Get save data filepath using windows dialog
         save_file_name = QtWidgets.QFileDialog.getSaveFileName(filter="seq files (*.seq)")
         # Combine data from text-boxes into array
@@ -197,16 +220,25 @@ class RunApp(Ui_mainWindow):
         self.savedSeqLineEdit.setText(save_file_name[0])
 
     def next_tab(self):
+        """
+        Switches view the next tab in the GUI.
+        """
         current_index = self.mainTab.currentIndex()
         next_index = current_index + 1
         self.mainTab.setCurrentIndex(next_index)
 
     def prev_tab(self):
+        """
+        Switches view to the previous tab in the GUI
+        """
         current_index = self.mainTab.currentIndex()
         prev_index = current_index - 1
         self.mainTab.setCurrentIndex(prev_index)
 
     def get_sample_info(self):
+        """
+        Stores the sample information from the 'Sample' tab into the class.
+        """
 
         def is_float(value):
             try:
@@ -243,6 +275,9 @@ class RunApp(Ui_mainWindow):
             self.currentSampleMassLbl.setText('Current sample mass: {} mg'.format(self.sample_mass))
 
     def clear_sample_info(self):
+        """
+        Clears sample info from the class.
+        """
         # Reset internal sample variables
         self.sample_name = ""
         self.sample_mass = 0.0
@@ -254,6 +289,9 @@ class RunApp(Ui_mainWindow):
         self.sampleMassLineEdit.setText("")
 
     def add_seq_to_chain(self):
+        """
+        Allows a .seq file to be selected from a file dialog and added to the experiment tree widget.
+        """
         # Open file dialog
         load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
         # Read file name of sequence
@@ -261,7 +299,7 @@ class RunApp(Ui_mainWindow):
         # Get number of repeats
         repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats')
 
-        # Add data to tree widget [FILEPATH, REPEATS] (repeats = 1 by default)
+        # Add data to tree widget [FILEPATH, REPEATS]
         if valid and repeats > 0:
             item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, [load_filename, str(repeats)])
             self.exptTreeWidget.addTopLevelItem(item)
@@ -269,6 +307,9 @@ class RunApp(Ui_mainWindow):
             self.show_dialog('Invalid entry!')
 
     def remove_seq_from_chain(self):
+        """
+        Removes the selected sequence from the Experiment tree widget
+        """
         # Check for selected items
         selected_item = self.exptTreeWidget.selectedItems()
         # If an item is selected
@@ -282,6 +323,10 @@ class RunApp(Ui_mainWindow):
             self.exptTextEdit.clear()
 
     def edit_seq(self):
+        """
+        Allows the user to edit the number of repeats for the selected sequence in the Experiment tree widget.
+
+        """
         # Check for selected items
         selected_item = self.exptTreeWidget.selectedItems()
 
@@ -297,6 +342,9 @@ class RunApp(Ui_mainWindow):
                 node.setText(1,'{}'.format(repeats))
 
     def display_seq(self, selected_item, col):
+        """
+        Displays the parameters in the selected sequence in the text box.
+        """
 
         if col == 0:
             # Read name from QTreeWidget
@@ -332,6 +380,11 @@ class RunApp(Ui_mainWindow):
             print('Sequence number clicked')
 
     def run_seq(self):
+        """
+        Runs an experiment from the GUI. Output data files are generated with a header containing useful information.
+        The sequences in the Experiment tree are parsed. An instance of the Worker class is generated to run the
+        experiment on a secondary thread to keep the GUI responsive.
+        """
         # Generate directory to hold output data files
         self.create_data_directory()
 
@@ -434,29 +487,24 @@ class RunApp(Ui_mainWindow):
             self.thread.finished.connect(self.reset_expt_tab)
 
     def reset_expt_tab(self):
+        """
+        Resets the 'Experiment' tab layout after an experiment is finished.
+        """
         self.runExptBtn.setEnabled(True)
         self.currentSeqLbl.setText('Current Sequence: ')
         self.currentRepeatLbl.setText('Current Repeat: ')
 
     def update_expt_labels(self,seq_name, repeat):
+        """
+        Updates the 'Experiment' tab labels during the experiment.
+        """
         self.currentSeqLbl.setText('Current Sequence: {}'.format(seq_name))
         self.currentRepeatLbl.setText('Current Repeat: {}'.format(repeat))
 
-    def plot_data(self, ch1_data, ch2_data):
-        pass
-        """
-        plt.plot(ch1_data)
-        plt.plot(ch2_data)
-        
-        test_filepath = "data\\test_datafile.txt"
-        save_data = np.stack((ch1_data, ch2_data), axis=1)
-
-        with open(test_filepath, "ab") as f:
-            np.savetxt(f, save_data, header='Ch 1 data, Ch 2 data', comments='', delimiter=',')
-        """
-
-
     def create_data_directory(self):
+        """
+        Creates a data folder to store the data files for the current sample.
+        """
 
         # Construct directory path
         dir_path = self.default_data_filepath + self.sample_name
@@ -470,6 +518,9 @@ class RunApp(Ui_mainWindow):
             self.show_dialog("No sample name has been saved!")
 
     def create_data_file(self, seq_name, rep):
+        """
+        Creates a data file for a given sample and adds useful information to the header.
+        """
 
         # Initialise loop variable
         i = 0
@@ -500,6 +551,9 @@ class RunApp(Ui_mainWindow):
 
 
     def get_data_directory(self):
+        """
+        Gets a selected data directory and outputs the files within to the ComboBox on the 'Plot' tab.
+        """
         # Get folder
         directory_path = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select data folder')
         # Update textbox
@@ -520,6 +574,10 @@ class RunApp(Ui_mainWindow):
         self.datafileCombobox.addItems(display_names)
 
     def show_dialog(self, msg_text):
+        """
+        Convenience function to show a warning dialog with custom text.
+
+        """
 
         msgbox = QtWidgets.QMessageBox()
         msgbox.setText(msg_text)
@@ -529,6 +587,9 @@ class RunApp(Ui_mainWindow):
 
 
 def close_GUI():
+    """
+    Disconnects devices from the PC as the GUI is closed.
+    """
     # Remove connection to SDR-14
     ui.device.delete_cu()
 
