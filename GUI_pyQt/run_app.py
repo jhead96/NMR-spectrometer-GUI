@@ -13,14 +13,20 @@ class Worker(QObject):
 
     # Finished signal
     finished = pyqtSignal()
-    data_out = pyqtSignal(object,object)
+    # Data signal
+    data_out = pyqtSignal(object, object)
+    # Sequence and repeats signal
+    expt_info = pyqtSignal(object, object)
 
-    def __init__(self, device, reg_vals, num_reps):
+    def __init__(self, device, reg_vals, num_reps, data_filepaths, seq_names):
         super().__init__()
         self.device = device
         self.reg_vals = reg_vals
         self.num_reps = num_reps
         self.num_seqs = np.size(num_reps)
+        self.data_filepaths = data_filepaths
+        self.seq_names = seq_names
+
 
     def run_expt(self):
 
@@ -36,34 +42,46 @@ class Worker(QObject):
                 for j in reg:
                     self.device.reg_write(*j)
 
+                # Emit expt info
+                self.expt_info.emit(self.seq_names[i], k + 1)
+
                 # Enable device
                 self.device.enable_dev()
+
                 # Start MR acquisition
                 ch1_data, ch2_data = self.device.MR_acquisition()
-                self.data_out.emit(ch1_data, ch2_data)
-                # print('Device enabled with register vales: ' + str(reg))
-                # print('Experiment number: {}'.format(k + 1))
+                # Save to file
+                self.save_data_to_file(self.data_filepaths[i, k], ch1_data, ch2_data)
 
-                time.sleep(10)
+                print('Sequence name: {}'.format(self.seq_names[i]))
+                print('Experiment number: {}'.format(k + 1))
+                print('Data file path: {}'.format(self.data_filepaths[i, k]))
+
+                time.sleep(5)
+
                 # Disable device
                 self.device.disable_dev()
-                self.device.disable_dev()
-
                 print('Device disabled')
                 time.sleep(5)
+                self.clear_console()
                 # Increment k
                 k += 1
 
-        print('Experiment finished')
+        print('Experiment finished!')
 
         # Emit finished signal
         self.finished.emit()
 
+    def save_data_to_file(self, filepath, ch1_data, ch2_data):
+        save_data = np.stack((ch1_data, ch2_data), axis=1)
 
-    def save_data_to_file(self, filepath):
+        with open(filepath, "ab") as f:
+            np.savetxt(f, save_data, header='Ch 1 data, Ch 2 data', comments='', delimiter=',')
+            f.close()
 
-        pass
-
+    def clear_console(self):
+        clear = "\n" * 100
+        print(clear)
 
 class RunApp(Ui_mainWindow):
     # Class to handle running the GUI.
@@ -103,10 +121,8 @@ class RunApp(Ui_mainWindow):
         # Run tab
         self.runExptBtn.clicked.connect(self.run_seq)
 
-
         # Data tab
         self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
-
 
         # Check for SDR14 connection
         try:
@@ -331,6 +347,8 @@ class RunApp(Ui_mainWindow):
         else:
             # Get sequence names and number of repeats from TreeWidget
             seq_filenames = np.empty(num_seq, dtype=object)
+            seq_names = np.empty(num_seq, dtype=object)
+            seq_name_short = np.empty(num_seq, dtype=object)
             num_reps = np.empty(num_seq)
 
             for i in range(num_seq):
@@ -343,12 +361,35 @@ class RunApp(Ui_mainWindow):
                 self.create_data_file(seq_name[:-4], int(repeats))
 
                 # Add filenames to array
+                seq_name_short[i] = seq_name.split('.')[0]
+                seq_names[i] = seq_name
                 seq_filenames[i] = self.default_seq_filepath + seq_name
+
                 # Add number of repeats to array
                 num_reps[i] = int(repeats)
 
+
+            # Reformat data filenames   ----------------------------------------------------------------
+            # Get max reps
+            max_reps = int(np.max(num_reps))
+            # Generate empty filename array of correct shape
+            self.data_file_cache = np.empty((num_seq, max_reps), dtype=object)
+
+            # Populate array with filenames
+            for i in range(num_seq):
+                # Initialise loop variable
+                k = 0
+                while k < num_reps[i]:
+                    filepath = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name_short[i] + '_expt{}'.format(k+1) +'.txt'
+                    print(filepath)
+                    # Add to cache
+                    self.data_file_cache[i, k] = filepath
+                    # Increment
+                    k += 1
+
+
             # Reformat data from .seq files ----------------------------------------------------------------
-       
+
             # Read data from files
             parameter_values = np.zeros(self.num_parameters)
 
@@ -376,7 +417,7 @@ class RunApp(Ui_mainWindow):
             # Create QThread object
             self.thread = QThread()
             # Create Worker instance
-            self.worker = Worker(self.device, reg_vals, num_reps)
+            self.worker = Worker(self.device, reg_vals, num_reps, self.data_file_cache, seq_name_short)
             # Move worker to thread
             self.worker.moveToThread(self.thread)
             # Connect signals and slots
@@ -384,21 +425,31 @@ class RunApp(Ui_mainWindow):
             self.worker.finished.connect(self.thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.worker.data_out.connect(self.plot_data)
+            self.worker.expt_info.connect(self.update_expt_labels)
             self.thread.finished.connect(self.thread.deleteLater)
             # Start thread
             self.thread.start()
 
-            # Disable button while running
+            # Disable run experiment button
             self.runExptBtn.setEnabled(False)
-            # On thread finished re-enable button.
-            self.thread.finished.connect(lambda: self.runExptBtn.setEnabled(True))
+            # On thread finished reset experiment tab
+            self.thread.finished.connect(self.reset_expt_tab)
 
+    def reset_expt_tab(self):
+        self.runExptBtn.setEnabled(True)
+        self.currentSeqLbl.setText('Current Sequence: ')
+        self.currentRepeatLbl.setText('Current Repeat: ')
 
+    def update_expt_labels(self,seq_name, repeat):
+        self.currentSeqLbl.setText('Current Sequence: {}'.format(seq_name))
+        self.currentRepeatLbl.setText('Current Repeat: {}'.format(repeat))
 
     def plot_data(self, ch1_data, ch2_data):
+        pass
+        """
         plt.plot(ch1_data)
         plt.plot(ch2_data)
-        """
+        
         test_filepath = "data\\test_datafile.txt"
         save_data = np.stack((ch1_data, ch2_data), axis=1)
 
@@ -432,9 +483,7 @@ class RunApp(Ui_mainWindow):
         while i < rep:
             # Construct file path (data/sample name/sample name + seq name + expt number.txt)
             file_path = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name + '_expt{}'.format(i+1) +'.txt'
-            print(file_path)
-            # Add to cache
-            self.data_file_cache.append(file_path)
+            #print(file_path)
             # Create data file
             f = open(file_path, "w+")
 
@@ -449,6 +498,9 @@ class RunApp(Ui_mainWindow):
             f.close()
 
             i += 1
+
+
+
 
     def get_data_directory(self):
         # Get folder
