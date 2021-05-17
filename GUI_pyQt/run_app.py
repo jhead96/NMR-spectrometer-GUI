@@ -368,7 +368,6 @@ class RunApp(Ui_mainWindow):
                 # Add number of repeats to array
                 num_reps[i] = int(repeats)
 
-
             # Reformat data filenames   ----------------------------------------------------------------
             # Get max reps
             max_reps = int(np.max(num_reps))
@@ -386,7 +385,6 @@ class RunApp(Ui_mainWindow):
                     self.data_file_cache[i, k] = filepath
                     # Increment
                     k += 1
-
 
             # Reformat data from .seq files ----------------------------------------------------------------
 
@@ -493,8 +491,7 @@ class RunApp(Ui_mainWindow):
             f.write("SAMPLE MASS (mg), {}\n".format(self.sample_mass))
             f.write("SEQUENCE, {}\n".format(seq_name))
             f.write("EXPERIMENT NUMBER, {}\n".format(i+1))
-            f.write("[Data]\n")
-            f.write("\n")
+            f.write("[DATA]\n")
             f.close()
 
             i += 1
