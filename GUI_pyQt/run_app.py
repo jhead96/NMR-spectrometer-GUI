@@ -137,6 +137,7 @@ class RunApp(Ui_mainWindow):
 
         # Data tab
         self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
+        self.updatePlotBtn.clicked.connect(self.plot_data)
 
         # Check for SDR14 connection
         try:
@@ -157,7 +158,6 @@ class RunApp(Ui_mainWindow):
         self.sample_mass = 0.0
 
         self.num_parameters = 6
-
 
     def clear_txt(self):
         """
@@ -547,9 +547,6 @@ class RunApp(Ui_mainWindow):
 
             i += 1
 
-
-
-
     def get_data_directory(self):
         """
         Gets a selected data directory and outputs the files within to the ComboBox on the 'Plot' tab.
@@ -572,6 +569,56 @@ class RunApp(Ui_mainWindow):
 
         # Add names to combo box
         self.datafileCombobox.addItems(display_names)
+
+    def plot_data(self):
+        def get_data_filepath():
+            """
+            Constructs data file path from combobox selection.
+            Returns: filepath
+            """
+
+            selected_filepath = '{}.txt'.format(self.datafileCombobox.currentText())
+            filepath = self.default_data_filepath + self.currentDataFolder.text() + '\\' + selected_filepath
+            return filepath
+
+        def get_header_size(filepath):
+            """
+            Calculates the header size of a given data file.
+            Returns: Header size
+            """
+            count = 0
+            with open(filepath) as f:
+
+                for line in f:
+                    count += 1
+                    if line == '[Data]\n':
+                        break
+
+            header_size = count + 1
+
+            return header_size
+
+        def clear_widgets():
+            """
+            Clears both plot widgets.
+            """
+
+            self.timePlotWidget.canvas.ax.clear()
+            self.timePlotWidget.canvas.draw()
+            self.frqPlotWidget.canvas.ax.clear()
+            self.frqPlotWidget.canvas.draw()
+
+        # Clear plot widgets
+        clear_widgets()
+        # Get data filepath
+        data_filepath = get_data_filepath()
+        # Get header size
+        skip_rows = get_header_size(data_filepath)
+        # Read data from selected file
+        data = np.loadtxt(data_filepath, delimiter=',', skiprows=skip_rows)
+        # Plot Ch A to widget
+        self.timePlotWidget.canvas.ax.plot(data[:, 0])
+        self.timePlotWidget.canvas.draw()
 
     def show_dialog(self, msg_text):
         """
