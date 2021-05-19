@@ -2,6 +2,7 @@ from gui_3 import *
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
+import scipy
 import time
 import os
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
@@ -608,6 +609,15 @@ class RunApp(Ui_mainWindow):
             self.frqPlotWidget.canvas.ax.clear()
             self.frqPlotWidget.canvas.draw()
 
+        def fourier_transform(data, fs):
+            Ts = 1/fs
+            N = data.size
+            data_FFT = scipy.fft.fft(data)
+            xf = scipy.fft.fftfreq(N, d=Ts)
+
+            return xf, data_FFT
+
+
         # Clear plot widgets
         clear_widgets()
         # Get data filepath
@@ -616,9 +626,23 @@ class RunApp(Ui_mainWindow):
         skip_rows = get_header_size(data_filepath)
         # Read data from selected file
         data = np.loadtxt(data_filepath, delimiter=',', skiprows=skip_rows)
-        # Plot Ch A to widget
+        # Calculate FFT frequencies and values for fs = 800MHz
+        xf, data_FT = fourier_transform(data[:, 0], fs=800e6)
+        N = data[:, 0].size
+
+        # Plot Ch A time data to time widget
         self.timePlotWidget.canvas.ax.plot(data[:, 0])
+        self.timePlotWidget.canvas.ax.set_ylabel('Signal')
+        self.timePlotWidget.canvas.ax.set_title('Channel A Signal from SDR14')
         self.timePlotWidget.canvas.draw()
+
+        # Plot Ch A FFT to frequency widget
+        self.frqPlotWidget.canvas.ax.plot(xf[0:int(N/2)], np.abs(data_FT[0:int(N/2)]))
+
+        self.frqPlotWidget.canvas.ax.set_xlabel('Frequency (Hz)')
+        self.frqPlotWidget.canvas.ax.set_ylabel('Intensity')
+        self.frqPlotWidget.canvas.ax.set_title('Spectrum')
+        self.frqPlotWidget.canvas.draw()
 
     def show_dialog(self, msg_text):
         """
