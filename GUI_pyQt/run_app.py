@@ -533,7 +533,7 @@ class RunApp(Ui_mainWindow):
         while i < rep:
             # Construct file path (data/sample name/sample name + seq name + expt number.txt)
             file_path = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name + '_expt{}'.format(i+1) +'.txt'
-            #print(file_path)
+
             # Create data file
             f = open(file_path, "w+")
 
@@ -592,7 +592,7 @@ class RunApp(Ui_mainWindow):
 
                 for line in f:
                     count += 1
-                    if line == '[Data]\n':
+                    if line == '[DATA]\n':
                         break
 
             header_size = count + 1
@@ -630,8 +630,10 @@ class RunApp(Ui_mainWindow):
         xf, data_FT = fourier_transform(data[:, 0], fs=800e6)
         N = data[:, 0].size
 
+
         # Plot Ch A time data to time widget
         self.timePlotWidget.canvas.ax.plot(data[:, 0])
+
         self.timePlotWidget.canvas.ax.set_ylabel('Signal')
         self.timePlotWidget.canvas.ax.set_title('Channel A Signal from SDR14')
         self.timePlotWidget.canvas.draw()

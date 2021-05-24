@@ -203,6 +203,7 @@ class sdr14:
                                                      ct.c_void_p]
         self.__api.ADQ_GetBoardSerialNumber.restype = ct.c_char_p
         self.__api.ADQ_GetBoardProductName.restype = ct.c_char_p
+        self.__api.ADQ_GetTemperature.restype = ct.c_int
         if not quiet:
             print("""
 Argument and response types set as follows (ct -> ctypes):
@@ -403,6 +404,29 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                 print("Loaded default register values\n")
             return 1
 
+    def read_temp(self, sensor_num):
+        temp = 0
+        sensor_type = np.array(['Local: ', 'ADC 0: ', 'ADC 1: ', 'FPGA: ', 'PCB diode: ', 'Error!'])
+        try:
+            sensor = int(sensor_num)
+
+            if 0 <= sensor <= 4:
+                sensor_in = ct.c_uint(sensor)
+                sensor_name = sensor_type[sensor]
+                temp = self.__api.ADQ_GetTemperature(self.__cu, self.device_number, sensor_in) / 256
+            else:
+                print('Invalid sensor number')
+                sensor_name = ''
+            return temp, sensor_name
+
+        except ValueError:
+            print('Invalid sensor number')
+            sensor_name = ''
+            return temp, sensor_name
+
+
+
+
     class stream_config_struct:
         """
         Data structure to store data streaming variables
@@ -510,7 +534,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
     def MR_acquisition(self):
 
         # Initialise streaming parameters
-        #  self.set_clock_source()
+        self.set_clock_source()
 
         self.set_trigger_mode()
         self.set_MR_settings()
@@ -554,12 +578,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
 
         return ch1_data, ch2_data
 
-
-    def get_data_setup(self,
-                       write_to_file=None,
-                       total_records=None,
-                       records_per_transfer=None,
-                       samples_per_record=None,
+    def get_data_setup(self, write_to_file=None, total_records=None, records_per_transfer=None, samples_per_record=None,
                        quiet=None):
         """
         Setup procedure for reading recorded data from SDR14
@@ -745,6 +764,9 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                                                             data[lenhalf + i]))
         return [ch1, ch2], exit_code
 
+
+
+
     ### FOR TESTING ONLY ###
 
 
@@ -801,6 +823,4 @@ def quick_input_demo():
     return data
 
 
-if __name__ == "__main__":
-    quick_input_demo()
 
