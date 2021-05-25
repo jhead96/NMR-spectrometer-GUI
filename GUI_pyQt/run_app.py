@@ -1,4 +1,4 @@
-from gui_3 import *
+from gui_4 import *
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,7 +9,7 @@ from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 import ADQ_tools_lite
 
-class Worker(QObject):
+class SpecMRWorker(QObject):
     """
     Class to handle interfacing with the SDR14 on a Worker thread.
     """
@@ -96,6 +96,50 @@ class Worker(QObject):
         clear = "\n" * 100
         print(clear)
 
+class SpecLiveWorker(QObject):
+    """
+    Class to handle continuous data acquisition from SDR 14 on worker thread.
+    """
+    # Signals
+    finished = pyqtSignal()
+    # Data out signal
+    data_out = pyqtSignal(int)
+
+    def __init__(self, device, reg_vals):
+        super().__init__()
+        self.device = device
+        self.reg_vals = reg_vals
+        self.enabled = True
+
+    def continuous_acquisition(self):
+        """
+        Function used to continuously acquire data from SDR14.
+        """
+        # Write register values
+        for i in self.reg_vals:
+            self.device.reg_write(*i)
+        # Enable device
+        self.device.enable_dev()
+
+        # Run loop until device disabled
+        while self.enabled:
+            data = np.random.randint(2, size=1)
+            print(data[0])
+            self.data_out.emit(data[0])
+
+        self.device.disable_dev()
+        self.finished.emit()
+
+    def stop_acquisition(self):
+        """
+        Stops the data acquisition from the SDR14
+        """
+
+        self.enabled = False
+
+
+
+
 class RunApp(Ui_mainWindow):
     """
     Class to handle operation of the GUI on the main thread.
@@ -114,7 +158,6 @@ class RunApp(Ui_mainWindow):
         self.exptTextEdit.setFont(self.font)
 
         # Connect buttons to functions
-
         # Sample tab
         self.confirmSampleInfoBtn.clicked.connect(self.get_sample_info)
         self.sampleTabNextBtn.clicked.connect(self.next_tab)
@@ -139,6 +182,10 @@ class RunApp(Ui_mainWindow):
         # Data tab
         self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
         self.updatePlotBtn.clicked.connect(self.plot_data)
+
+        # Live tab
+        self.startLivePlot.clicked.connect(self.start_live_plot)
+        self.endLivePlot.clicked.connect(self.end_live_plot)
 
         # Check for SDR14 connection
         try:
@@ -469,7 +516,7 @@ class RunApp(Ui_mainWindow):
             # Create QThread object
             self.thread = QThread()
             # Create Worker instance
-            self.worker = Worker(self.device, reg_vals, num_reps, self.data_file_cache, seq_name_short)
+            self.worker = SpecMRWorker(self.device, reg_vals, num_reps, self.data_file_cache, seq_name_short)
             # Move worker to thread
             self.worker.moveToThread(self.thread)
             # Connect signals and slots
@@ -486,6 +533,39 @@ class RunApp(Ui_mainWindow):
             self.runExptBtn.setEnabled(False)
             # On thread finished reset experiment tab
             self.thread.finished.connect(self.reset_expt_tab)
+
+    def start_live_plot(self):
+
+
+        # Set fixed register values for now
+        reg_vals = np.array([(1, int(10e6)), (2, int(1e4)), (3, int(2e4)), (5, int(1e4)), (7, int(5e4))])
+
+        # Setup new thread for continuous acquisition
+        self.liveThread = QThread()
+        self.liveWorker = SpecLiveWorker(self.device, reg_vals)
+        self.liveWorker.moveToThread(self.liveThread)
+
+        self.liveThread.started.connect(self.liveWorker.continuous_acquisition)
+        self.liveThread.finished.connect(self.liveThread.deleteLater)
+
+        self.liveWorker.data_out.connect(self.display_live_plot)
+        self.liveWorker.finished.connect(self.liveThread.quit)
+        self.liveWorker.finished.connect(self.liveWorker.deleteLater)
+
+        # Start thread
+        self.liveThread.start()
+
+        # Disable live button
+        self.startLivePlot.setEnabled(False)
+        # Enable live button on thread finish
+        self.liveThread.finished.connect(lambda: self.startLivePlot.setEnabled(True))
+
+    def end_live_plot(self):
+        self.liveWorker.stop_acquisition()
+
+    def display_live_plot(self, data):
+        pass
+        #print(data)
 
     def reset_expt_tab(self):
         """
@@ -663,8 +743,9 @@ def close_GUI():
     """
     Disconnects devices from the PC as the GUI is closed.
     """
-    # Remove connection to SDR-14
-    ui.device.delete_cu()
+    # Remove connection to SDR-14 if connected
+    if ui.device:
+        ui.device.delete_cu()
 
 app = QtWidgets.QApplication(sys.argv)
 # Handle application close
