@@ -103,7 +103,7 @@ class SpecLiveWorker(QObject):
     # Signals
     finished = pyqtSignal()
     # Data out signal
-    data_out = pyqtSignal(int)
+    data_out = pyqtSignal(object, object)
 
     def __init__(self, device, reg_vals):
         super().__init__()
@@ -123,12 +123,10 @@ class SpecLiveWorker(QObject):
 
         # Run loop until device disabled
         while self.enabled:
-            data = np.random.randint(2, size=1)
-            print(data[0])
-            self.data_out.emit(data[0])
 
-        self.device.disable_dev()
-        self.finished.emit()
+            ch1_data, ch2_data = self.device.MR_acquisition()
+            self.data_out.emit(ch1_data, ch2_data)
+
 
     def stop_acquisition(self):
         """
@@ -136,8 +134,8 @@ class SpecLiveWorker(QObject):
         """
 
         self.enabled = False
-
-
+        self.device.disable_dev()
+        self.finished.emit()
 
 
 class RunApp(Ui_mainWindow):
@@ -147,8 +145,12 @@ class RunApp(Ui_mainWindow):
 
     def __init__(self, window):
 
+        # Setup GUI components
         self.setupUi(window)
         self.dialog = QtWidgets.QInputDialog()
+
+        # Setup graph widgets
+        self.line1, self.line2 = self.initialise_plot_widgets()
 
         # Can this stuff be changed in qtdesigner?
         self.mainTab.setCurrentIndex(0)
@@ -206,6 +208,16 @@ class RunApp(Ui_mainWindow):
         self.sample_mass = 0.0
 
         self.num_parameters = 6
+
+    def initialise_plot_widgets(self):
+        self.liveTimePlotWidget.canvas.ax.set_title('Signal from SDR14')
+        self.liveTimePlotWidget.canvas.ax.set_xlabel('Sample number')
+        self.liveTimePlotWidget.canvas.ax.set_ylabel('Signal')
+        self.liveTimePlotWidget.canvas.ax.set_ylim([-8192, 8192])
+        live_time_plot_ch1_line = self.liveTimePlotWidget.canvas.ax.plot([], [], 'b-')
+        live_time_plot_ch2_line = self.liveTimePlotWidget.canvas.ax.plot([], [], 'o-')
+
+        return live_time_plot_ch1_line, live_time_plot_ch2_line
 
     def clear_txt(self):
         """
@@ -536,7 +548,6 @@ class RunApp(Ui_mainWindow):
 
     def start_live_plot(self):
 
-
         # Set fixed register values for now
         reg_vals = np.array([(1, int(10e6)), (2, int(1e4)), (3, int(2e4)), (5, int(1e4)), (7, int(5e4))])
 
@@ -563,9 +574,17 @@ class RunApp(Ui_mainWindow):
     def end_live_plot(self):
         self.liveWorker.stop_acquisition()
 
-    def display_live_plot(self, data):
-        pass
-        #print(data)
+    def display_live_plot(self, ch1_data, ch2_data):
+
+        def plot_data_slow(ch1_data, ch2_data):
+
+            self.liveTimePlotWidget.canvas.ax.clear()
+            self.liveTimePlotWidget.canvas.ax.plot(ch1_data[0:1000])
+            self.liveTimePlotWidget.canvas.ax.plot(ch2_data[0:1000])
+            self.liveTimePlotWidget.canvas.ax.set_ylim([-8192, 8192])
+            self.liveTimePlotWidget.canvas.draw()
+
+        plot_data_slow(ch1_data, ch2_data)
 
     def reset_expt_tab(self):
         """

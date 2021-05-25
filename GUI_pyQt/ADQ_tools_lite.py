@@ -531,6 +531,8 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         if trig_armed:
             print('Trigger armed')
 
+
+
     def MR_acquisition(self):
 
         # Initialise streaming parameters
