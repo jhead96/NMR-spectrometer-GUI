@@ -150,7 +150,8 @@ class RunApp(Ui_mainWindow):
         self.dialog = QtWidgets.QInputDialog()
 
         # Setup graph widgets
-        self.line1, self.line2 = self.initialise_plot_widgets()
+        self.initialise_plot_widgets()
+        self._plot_ref = None
 
         # Can this stuff be changed in qtdesigner?
         self.mainTab.setCurrentIndex(0)
@@ -213,11 +214,7 @@ class RunApp(Ui_mainWindow):
         self.liveTimePlotWidget.canvas.ax.set_title('Signal from SDR14')
         self.liveTimePlotWidget.canvas.ax.set_xlabel('Sample number')
         self.liveTimePlotWidget.canvas.ax.set_ylabel('Signal')
-        self.liveTimePlotWidget.canvas.ax.set_ylim([-8192, 8192])
-        live_time_plot_ch1_line = self.liveTimePlotWidget.canvas.ax.plot([], [], 'b-')
-        live_time_plot_ch2_line = self.liveTimePlotWidget.canvas.ax.plot([], [], 'o-')
 
-        return live_time_plot_ch1_line, live_time_plot_ch2_line
 
     def clear_txt(self):
         """
@@ -579,12 +576,28 @@ class RunApp(Ui_mainWindow):
         def plot_data_slow(ch1_data, ch2_data):
 
             self.liveTimePlotWidget.canvas.ax.clear()
-            self.liveTimePlotWidget.canvas.ax.plot(ch1_data[0:1000])
-            self.liveTimePlotWidget.canvas.ax.plot(ch2_data[0:1000])
-            self.liveTimePlotWidget.canvas.ax.set_ylim([-8192, 8192])
+            self.liveTimePlotWidget.canvas.ax.plot(ch1_data)
+            self.liveTimePlotWidget.canvas.ax.plot(ch2_data)
+            self.liveTimePlotWidget.canvas.ax.set_ylim([0, 10])
             self.liveTimePlotWidget.canvas.draw()
 
-        plot_data_slow(ch1_data, ch2_data)
+        def plot_data(x, ch1_data, ch2_data):
+
+            if self._plot_ref is None:
+                plot_refs = self.liveTimePlotWidget.canvas.ax.plot(x, ch1_data)
+                self._plot_ref = plot_refs[0]
+            else:
+                self._plot_ref.set_ydata(ch1_data)
+
+            self.liveTimePlotWidget.canvas.draw()
+
+        x = np.arange(0, 1000)
+
+        plot_data(x, ch1_data[0:1000], ch2_data[0:1000])
+
+
+
+
 
     def reset_expt_tab(self):
         """
