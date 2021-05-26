@@ -151,7 +151,8 @@ class RunApp(Ui_mainWindow):
 
         # Setup graph widgets
         self.initialise_plot_widgets()
-        self._plot_ref = None
+        self.live_time_plot_ref = {"Channel A": None, "Channel B": None}
+        self.live_frq_plot_ref = {"Channel A": None, "Channel B": None}
 
         # Can this stuff be changed in qtdesigner?
         self.mainTab.setCurrentIndex(0)
@@ -215,6 +216,9 @@ class RunApp(Ui_mainWindow):
         self.liveTimePlotWidget.canvas.ax.set_xlabel('Sample number')
         self.liveTimePlotWidget.canvas.ax.set_ylabel('Signal')
 
+        self.liveFrqPlotWidget.canvas.ax.set_title('FFT of SDR14 signal')
+        self.liveFrqPlotWidget.canvas.ax.set_xlabel('f (Hz)')
+        self.liveFrqPlotWidget.canvas.ax.set_ylabel('Intensity (arb units)')
 
     def clear_txt(self):
         """
@@ -573,31 +577,38 @@ class RunApp(Ui_mainWindow):
 
     def display_live_plot(self, ch1_data, ch2_data):
 
-        def plot_data_slow(ch1_data, ch2_data):
+        def plot_time_data(x, ch1_data, ch2_data):
 
-            self.liveTimePlotWidget.canvas.ax.clear()
-            self.liveTimePlotWidget.canvas.ax.plot(ch1_data)
-            self.liveTimePlotWidget.canvas.ax.plot(ch2_data)
-            self.liveTimePlotWidget.canvas.ax.set_ylim([0, 10])
-            self.liveTimePlotWidget.canvas.draw()
+            if (self.live_time_plot_ref["Channel A"] is None) and (self.live_time_plot_ref["Channel B"] is None):
+                # If plots are blank, generate plot references
+                plot_refs = self.liveTimePlotWidget.canvas.ax.plot(x, ch1_data, x, ch2_data)
 
-        def plot_data(x, ch1_data, ch2_data):
+                self.live_time_plot_ref["Channel A"] = plot_refs[0]
+                self.live_time_plot_ref["Channel A"].set_label('CH A')
 
-            if self._plot_ref is None:
-                plot_refs = self.liveTimePlotWidget.canvas.ax.plot(x, ch1_data)
-                self._plot_ref = plot_refs[0]
+                self.live_time_plot_ref["Channel B"] = plot_refs[1]
+                self.live_time_plot_ref["Channel B"].set_label('CH B')
+                self.liveTimePlotWidget.canvas.ax.legend(loc='upper right')
+
             else:
-                self._plot_ref.set_ydata(ch1_data)
+                # Update plot references
+                self.live_time_plot_ref["Channel A"].set_ydata(ch1_data)
+                self.live_time_plot_ref["Channel B"].set_ydata(ch2_data)
 
             self.liveTimePlotWidget.canvas.draw()
 
-        x = np.arange(0, 1000)
+        def fourier_transform(data, fs):
+            Ts = 1 / fs
+            N = data.size
+            data_FFT = scipy.fft.fft(data)
+            xf = scipy.fft.fftfreq(N, d=Ts)
 
-        plot_data(x, ch1_data[0:1000], ch2_data[0:1000])
+            return xf, data_FFT
 
+        N = 1000
+        x = np.arange(0, N)
 
-
-
+        plot_time_data(x, ch1_data[0:N], ch2_data[0:N])
 
     def reset_expt_tab(self):
         """
@@ -607,7 +618,7 @@ class RunApp(Ui_mainWindow):
         self.currentSeqLbl.setText('Current Sequence: ')
         self.currentRepeatLbl.setText('Current Repeat: ')
 
-    def update_expt_labels(self,seq_name, repeat):
+    def update_expt_labels(self, seq_name, repeat):
         """
         Updates the 'Experiment' tab labels during the experiment.
         """
