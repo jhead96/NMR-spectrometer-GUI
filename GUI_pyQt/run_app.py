@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import scipy
 import time
 import os
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
+from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 import ADQ_tools_lite
 
@@ -127,10 +127,9 @@ class SpecLiveWorker(QObject):
             ch1_data, ch2_data = self.device.MR_acquisition()
             self.data_out.emit(ch1_data, ch2_data)
 
-
     def stop_acquisition(self):
         """
-        Stops the data acquisition from the SDR14
+        Stops the data acquisition from the SDR14.
         """
 
         self.enabled = False
@@ -153,6 +152,13 @@ class RunApp(Ui_mainWindow):
         self.initialise_plot_widgets()
         self.live_time_plot_ref = {"Channel A": None, "Channel B": None}
         self.live_frq_plot_ref = {"Channel A": None, "Channel B": None}
+        self.ch1_data = None
+        self.ch2_data = None
+
+        # Setup timer
+        self.update_timer = QTimer()
+        self.timer_on = False
+        self.update_timer.timeout.connect(self.update_live_plot_on_timeout)
 
         # Can this stuff be changed in qtdesigner?
         self.mainTab.setCurrentIndex(0)
@@ -548,7 +554,10 @@ class RunApp(Ui_mainWindow):
             self.thread.finished.connect(self.reset_expt_tab)
 
     def start_live_plot(self):
-
+        """
+        Starts live plotting.
+        :return:
+        """
         # Set fixed register values for now
         reg_vals = np.array([(1, int(10e6)), (2, int(1e4)), (3, int(2e4)), (5, int(1e4)), (7, int(5e4))])
 
@@ -560,7 +569,7 @@ class RunApp(Ui_mainWindow):
         self.liveThread.started.connect(self.liveWorker.continuous_acquisition)
         self.liveThread.finished.connect(self.liveThread.deleteLater)
 
-        self.liveWorker.data_out.connect(self.display_live_plot)
+        self.liveWorker.data_out.connect(self.fetch_live_plot_data)
         self.liveWorker.finished.connect(self.liveThread.quit)
         self.liveWorker.finished.connect(self.liveWorker.deleteLater)
 
@@ -572,10 +581,34 @@ class RunApp(Ui_mainWindow):
         # Enable live button on thread finish
         self.liveThread.finished.connect(lambda: self.startLivePlot.setEnabled(True))
 
-    def end_live_plot(self):
-        self.liveWorker.stop_acquisition()
+        # Start timer for plots
+        self.update_timer.start(500)
 
-    def display_live_plot(self, ch1_data, ch2_data):
+    def end_live_plot(self):
+        """
+        Ends live plotting from SDR14.
+        :return:
+        """
+
+        self.liveWorker.stop_acquisition()
+        self.update_timer.stop()
+
+    def fetch_live_plot_data(self, ch1_data, ch2_data):
+        """
+        :param ch1_data: Data from SDR14 ch1 emit from worker thread.
+        :param ch2_data: Data from SDR14 ch2 emitted from worker thread.
+        :return:
+        """
+
+        # Assign data from SDR14 worker thread to class variables
+        self.ch1_data = ch1_data
+        self.ch2_data = ch2_data
+
+    def update_live_plot_on_timeout(self):
+        """
+        Updates time and frequency live tab plots incoming data from SDR14 every 0.5 seconds.
+        :return:
+        """
 
         def plot_time_data(x, ch1_data, ch2_data):
 
@@ -597,6 +630,34 @@ class RunApp(Ui_mainWindow):
 
             self.liveTimePlotWidget.canvas.draw()
 
+        def plot_frq_data(xf, ch1_FFT, ch2_FFT):
+
+            N = ch1_FFT.size
+            ind = int(N/2)
+            y1 = np.abs(ch1_FFT[0:ind:10])
+            y2 = np.abs(ch2_FFT[0:ind:10])
+
+            ind = int(N/2)
+
+            if (self.live_frq_plot_ref["Channel A"] is None) and (self.live_frq_plot_ref["Channel B"] is None):
+
+                x = xf[0:ind:10]
+                # If plots are blank, generate plot references
+                plot_refs = self.liveFrqPlotWidget.canvas.ax.plot(x, y1, x, y2)
+
+                self.live_frq_plot_ref["Channel A"] = plot_refs[0]
+                self.live_frq_plot_ref["Channel A"].set_label('CH A')
+
+                self.live_frq_plot_ref["Channel B"] = plot_refs[1]
+                self.live_frq_plot_ref["Channel B"].set_label('CH B')
+                self.liveFrqPlotWidget.canvas.ax.legend(loc='upper right')
+            else:
+                # Update plot references
+                self.live_frq_plot_ref["Channel A"].set_ydata(y1)
+                self.live_frq_plot_ref["Channel B"].set_ydata(y2)
+
+            self.liveFrqPlotWidget.canvas.draw()
+
         def fourier_transform(data, fs):
             Ts = 1 / fs
             N = data.size
@@ -608,7 +669,12 @@ class RunApp(Ui_mainWindow):
         N = 1000
         x = np.arange(0, N)
 
-        plot_time_data(x, ch1_data[0:N], ch2_data[0:N])
+        plot_time_data(x, self.ch1_data[0:N], self.ch2_data[0:N])
+
+        ch1_xf, ch1_FFT = fourier_transform(self.ch1_data, fs=800e6)
+        ch2_xf, ch2_FFT = fourier_transform(self.ch2_data, fs=800e6)
+
+        plot_frq_data(ch1_xf, ch1_FFT, ch2_FFT)
 
     def reset_expt_tab(self):
         """
