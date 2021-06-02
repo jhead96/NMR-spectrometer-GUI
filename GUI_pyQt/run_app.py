@@ -1,4 +1,4 @@
-from gui_4 import *
+from gui_5 import *
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -136,7 +136,6 @@ class SpecLiveWorker(QObject):
         self.device.disable_dev()
         self.finished.emit()
 
-
 class RunApp(Ui_mainWindow):
     """
     Class to handle operation of the GUI on the main thread.
@@ -152,13 +151,12 @@ class RunApp(Ui_mainWindow):
         self.initialise_plot_widgets()
         self.live_time_plot_ref = {"Channel A": None, "Channel B": None}
         self.live_frq_plot_ref = {"Channel A": None, "Channel B": None}
+
+        # Setup live plotting timer and data variables
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self.update_live_plot_on_timeout)
         self.ch1_data = None
         self.ch2_data = None
-
-        # Setup timer
-        self.update_timer = QTimer()
-        self.timer_on = False
-        self.update_timer.timeout.connect(self.update_live_plot_on_timeout)
 
         # Can this stuff be changed in qtdesigner?
         self.mainTab.setCurrentIndex(0)
@@ -196,6 +194,8 @@ class RunApp(Ui_mainWindow):
         # Live tab
         self.startLivePlot.clicked.connect(self.start_live_plot)
         self.endLivePlot.clicked.connect(self.end_live_plot)
+        # CHANGE IN QTDESIGNER
+        self.pushButton.clicked.connect(self.select_live_sequence)
 
         # Check for SDR14 connection
         try:
@@ -203,7 +203,6 @@ class RunApp(Ui_mainWindow):
         except IOError:
             self.device = None
             print('No device connected!')
-
 
         # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
@@ -553,13 +552,36 @@ class RunApp(Ui_mainWindow):
             # On thread finished reset experiment tab
             self.thread.finished.connect(self.reset_expt_tab)
 
+    def select_live_sequence(self):
+        # Open file dialog
+        load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
+        # Read file name of sequence
+        load_filename = load_filepath[0].split('/')[-1]
+        # Set loaded file textbox
+        self.livePlotSelectedSeqLineEdit.setText(load_filename)
+
     def start_live_plot(self):
         """
         Starts live plotting.
-        :return:
         """
+
+        if self.livePlotSelectedSeqLineEdit.text() == "":
+            self.select_live_sequence()
+
+        seq_path = self.default_seq_filepath + self.livePlotSelectedSeqLineEdit.text()
+        data = np.loadtxt(seq_path)
+        data = np.delete(data, 1)
+
+        # Regs to update
+        regs_to_update = np.array([1, 2, 3, 5, 7])
+        reg_vals = np.empty(regs_to_update.size, dtype=tuple)
+
+        for index, reg in enumerate(regs_to_update):
+            pair = (reg, int(data[index]))
+            reg_vals[index] = pair
+
         # Set fixed register values for now
-        reg_vals = np.array([(1, int(10e6)), (2, int(1e4)), (3, int(2e4)), (5, int(1e4)), (7, int(5e4))])
+        # reg_vals2 = np.array([(1, int(10e6)), (2, int(1e4)), (3, int(2e4)), (5, int(1e4)), (7, int(5e4))])
 
         # Setup new thread for continuous acquisition
         self.liveThread = QThread()
@@ -595,7 +617,7 @@ class RunApp(Ui_mainWindow):
 
     def fetch_live_plot_data(self, ch1_data, ch2_data):
         """
-        :param ch1_data: Data from SDR14 ch1 emit from worker thread.
+        :param ch1_data: Data from SDR14 ch1 emitted from worker thread.
         :param ch2_data: Data from SDR14 ch2 emitted from worker thread.
         :return:
         """
@@ -606,8 +628,7 @@ class RunApp(Ui_mainWindow):
 
     def update_live_plot_on_timeout(self):
         """
-        Updates time and frequency live tab plots incoming data from SDR14 every 0.5 seconds.
-        :return:
+        Updates time and frequency live tab plots incoming data from SDR14 on QTimer timeout.
         """
 
         def plot_time_data(x, ch1_data, ch2_data):
@@ -669,11 +690,12 @@ class RunApp(Ui_mainWindow):
         N = 1000
         x = np.arange(0, N)
 
+        # Plot time data
         plot_time_data(x, self.ch1_data[0:N], self.ch2_data[0:N])
-
+        # Calculate FFT of incoming data
         ch1_xf, ch1_FFT = fourier_transform(self.ch1_data, fs=800e6)
         ch2_xf, ch2_FFT = fourier_transform(self.ch2_data, fs=800e6)
-
+        # Plot frq data
         plot_frq_data(ch1_xf, ch1_FFT, ch2_FFT)
 
     def reset_expt_tab(self):
@@ -846,7 +868,6 @@ class RunApp(Ui_mainWindow):
         msgbox.setWindowTitle("Warning")
         msgbox.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msgbox.exec()
-
 
 def close_GUI():
     """
