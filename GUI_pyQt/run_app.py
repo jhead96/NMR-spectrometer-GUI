@@ -626,6 +626,8 @@ class RunApp(Ui_mainWindow):
         self.ch1_data = ch1_data
         self.ch2_data = ch2_data
 
+        # Add to accumulator variable
+
     def update_live_plot_on_timeout(self):
         """
         Updates time and frequency live tab plots incoming data from SDR14 on QTimer timeout.
