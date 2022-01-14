@@ -1,4 +1,4 @@
-from gui_5 import *
+from gui_6 import *
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -179,13 +179,13 @@ class RunApp(Ui_mainWindow):
         self.seqTabReturnBtn.clicked.connect(self.prev_tab)
 
         # Experiment tab
-        self.addSeqBtn.clicked.connect(self.add_seq_to_chain)
-        self.removeSeqBtn.clicked.connect(self.remove_seq_from_chain)
+        self.addSeqBtn.clicked.connect(self.add_spec_command)
+        self.removeSeqBtn.clicked.connect(self.remove_command)
         self.editSeqBtn.clicked.connect(self.edit_seq)
-        self.exptTreeWidget.itemDoubleClicked.connect(self.display_seq)
+        self.exptTreeWidget.itemDoubleClicked.connect(self.display_command)
 
         # Run tab
-        self.runExptBtn.clicked.connect(self.run_seq)
+        self.runExptBtn.clicked.connect(self.run_expt)
 
         # Data tab
         self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
@@ -354,25 +354,25 @@ class RunApp(Ui_mainWindow):
         self.sampleNameLineEdit.setText("")
         self.sampleMassLineEdit.setText("")
 
-    def add_seq_to_chain(self):
+    def add_spec_command(self):
         """
         Allows a .seq file to be selected from a file dialog and added to the experiment tree widget.
         """
         # Open file dialog
         load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
         # Read file name of sequence
-        load_filename = load_filepath[0].split('/')[-1]
+        load_filename = load_filepath[0].split('/')[-1][:-4]
         # Get number of repeats
-        repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats')
+        repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1 )
 
-        # Add data to tree widget [FILEPATH, REPEATS]
+        # Add data to tree widget [TYPE,  SEQ NAME, REPEATS]
         if valid and repeats > 0:
-            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, [load_filename, str(repeats)])
+            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['NMR', load_filename, str(repeats)])
             self.exptTreeWidget.addTopLevelItem(item)
         else:
             self.show_dialog('Invalid entry!')
 
-    def remove_seq_from_chain(self):
+    def remove_command(self):
         """
         Removes the selected sequence from the Experiment tree widget
         """
@@ -407,7 +407,7 @@ class RunApp(Ui_mainWindow):
                 # Write to tree
                 node.setText(1,'{}'.format(repeats))
 
-    def display_seq(self, selected_item, col):
+    def display_command(self, selected_item, col):
         """
         Displays the parameters in the selected sequence in the text box.
         """
@@ -445,7 +445,7 @@ class RunApp(Ui_mainWindow):
         elif col == 1:
             print('Sequence number clicked')
 
-    def run_seq(self):
+    def run_expt(self):
         """
         Runs an experiment from the GUI. Output data files are generated with a header containing useful information.
         The sequences in the Experiment tree are parsed. An instance of the Worker class is generated to run the
