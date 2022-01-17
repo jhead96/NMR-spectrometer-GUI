@@ -1,4 +1,6 @@
 from gui_6 import *
+from run_PPMS_command_window import *
+
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
@@ -181,7 +183,8 @@ class RunApp(Ui_mainWindow):
         # Experiment tab
         self.addSeqBtn.clicked.connect(self.add_spec_command)
         self.removeSeqBtn.clicked.connect(self.remove_command)
-        self.editSeqBtn.clicked.connect(self.edit_seq)
+        self.editSeqBtn.clicked.connect(self.edit_command)
+        self.pushButton_4.clicked.connect(self.add_PPMS_command)
         self.exptTreeWidget.itemDoubleClicked.connect(self.display_command)
 
         # Run tab
@@ -372,6 +375,26 @@ class RunApp(Ui_mainWindow):
         else:
             self.show_dialog('Invalid entry!')
 
+    def add_PPMS_command(self):
+
+        # Bring up PPMS command window
+        self.ppms_window = QtWidgets.QMainWindow()
+        self.ui = runPPMSCommandWindow(self.ppms_window)
+        self.ui.submitted.connect(self.add_PPMS_command_to_expt)
+        self.ppms_window.show()
+
+    def add_PPMS_command_to_expt(self, parameter, value):
+        print(parameter)
+        print(value)
+        self.ppms_window.destroy()
+
+        if parameter == '0':
+            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Temperature', f'Set Temperature to {value}K ', '--'])
+            self.exptTreeWidget.addTopLevelItem(item)
+        else:
+            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Magnetic Field', f'Set Magnetic Field to {value}Oe ', '--'])
+            self.exptTreeWidget.addTopLevelItem(item)
+
     def remove_command(self):
         """
         Removes the selected sequence from the Experiment tree widget
@@ -388,9 +411,9 @@ class RunApp(Ui_mainWindow):
             self.exptTreeWidget.takeTopLevelItem(index.row())
             self.exptTextEdit.clear()
 
-    def edit_seq(self):
+    def edit_command(self):
         """
-        Allows the user to edit the number of repeats for the selected sequence in the Experiment tree widget.
+        Allows the user to edit the number of repeats for an NMR sequence in the Experiment tree widget.
 
         """
         # Check for selected items
@@ -400,26 +423,43 @@ class RunApp(Ui_mainWindow):
         if selected_item:
             # Get node from tree
             node = selected_item[0]
-            # Get new value for repeats
-            repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats')
+            type = node.text(0)
 
-            if valid and repeats > 0:
-                # Write to tree
-                node.setText(1,'{}'.format(repeats))
+            if type == 'PPMS - Temperature':
+                value, valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit temperature',
+                                                                'Enter temperature (2K - 400K)', min=2, max=400, decimals=3)
+                if valid:
+                    # Write to tree
+                    node.setText(1, f'Set Temperature to {float(value)}K ')
+
+            elif type == 'PPMS - Magnetic Field':
+                value, valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit magnetic field',
+                                                                'Enter magnetic field (-70000Oe - 70000Oe)', min=-70000, max=70000, value=0,
+                                                                 decimals=3)
+                if valid:
+                    # Write to tree
+                    node.setText(1, f'Set Magnetic Field to {float(value)}Oe ')
+
+            else:
+                # Get new value for repeats
+                repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1)
+
+                if valid:
+                    # Write to tree
+                    node.setText(2, f'{repeats}')
 
     def display_command(self, selected_item, col):
         """
         Displays the parameters in the selected sequence in the text box.
         """
 
-        if col == 0:
+        if col == 0 or col == 1 or col == 2:
             # Read name from QTreeWidget
-            name = selected_item.text(col)
-
+            name = selected_item.text(1)
             # Replace try with check for file existing!
             try:
                 # Construct full filepath
-                seq_path = self.default_seq_filepath + name
+                seq_path = self.default_seq_filepath + name + '.seq'
                 # Load sequence data
                 seq_data = np.loadtxt(seq_path)
                 # Clear textEdit
@@ -441,9 +481,6 @@ class RunApp(Ui_mainWindow):
                 self.exptTextEdit.setHtml(seq_text)
             except:
                 print('Error!')
-
-        elif col == 1:
-            print('Sequence number clicked')
 
     def run_expt(self):
         """
