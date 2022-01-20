@@ -41,7 +41,7 @@ class runPPMSCommandWindow(Ui_PPMSCommandWindow, QObject):
         if valid:
             # Send to main window
             self.submitted.emit(str(parameter), str(value))
-            print('Data sent!')
+            #print('Data sent!')
         else:
             # Show error message
             if parameter == 0:

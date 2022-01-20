@@ -23,14 +23,14 @@ class SpecMRWorker(QObject):
     # Sequence and repeats signal
     expt_info = pyqtSignal(object, object)
 
-    def __init__(self, device, reg_vals, num_reps, data_filepaths, seq_names):
+    def __init__(self, device, reg_vals, num_reps, data_filepaths, seq_name):
         super().__init__()
         self.device = device
         self.reg_vals = reg_vals
-        self.num_reps = num_reps
+        self.num_reps = int(num_reps)
         self.num_seqs = np.size(num_reps)
         self.data_filepaths = data_filepaths
-        self.seq_names = seq_names
+        self.seq_name = seq_name
 
 
     def run_expt(self):
@@ -38,25 +38,23 @@ class SpecMRWorker(QObject):
         Runs an experiment on the SDR14 using the parameters entered on the 'Experiment' tab of the GUI.
         Saves 1 record of data from the SDR14 using the MultiRecord mode to a text file.
         """
+        # Initialise k
+        k = 0
+        # Loop for number of repeats
+        while k < self.num_reps:
+            # Write reg values to device
+            for j in self.reg_vals:
 
-        for i in range(self.num_seqs):
-            # Get reg values and number of repeats for sequence i
-            reg = self.reg_vals[:, i]
-            reps = self.num_reps[i]
-            # Initialise k
-            k = 0
-            # Loop for number of repeats
-            while k < reps:
-                # Write reg values to device
-                for j in reg:
-                    self.device.reg_write(*j)
+                # Write data to SDR14 registers
+                self.device.reg_write(*j)
 
                 # Emit expt info
-                self.expt_info.emit(self.seq_names[i], k + 1)
+                self.expt_info.emit(self.seq_name, k + 1)
 
                 # Enable device
                 self.device.enable_dev()
 
+                """
                 # Start MR acquisition
                 ch1_data, ch2_data = self.device.MR_acquisition()
                 # Save to file
@@ -64,7 +62,7 @@ class SpecMRWorker(QObject):
 
                 print('Sequence name: {}'.format(self.seq_names[i]))
                 print('Experiment number: {}'.format(k + 1))
-                print('Data file path: {}'.format(self.data_filepaths[i, k]))
+                print('Data file path: {}'.format(self.data_filepaths[i, k]))"""
 
                 time.sleep(5)
 
@@ -213,6 +211,10 @@ class RunApp(Ui_mainWindow):
 
         # Initialise data file cache
         self.data_file_cache = []
+
+        # Initialise registers to be updated on FPGA
+        self.registers = np.array([1, 2, 3, 5, 7])
+
         # Initialise sample parameters
         self.sample_name = ''
         self.sample_mass = 0.0
@@ -384,8 +386,8 @@ class RunApp(Ui_mainWindow):
         self.ppms_window.show()
 
     def add_PPMS_command_to_expt(self, parameter, value):
-        print(parameter)
-        print(value)
+        #print(parameter)
+        #print(value)
         self.ppms_window.destroy()
 
         if parameter == '0':
@@ -484,94 +486,21 @@ class RunApp(Ui_mainWindow):
 
     def run_expt(self):
         """
-        Runs an experiment from the GUI. Output data files are generated with a header containing useful information.
-        The sequences in the Experiment tree are parsed. An instance of the Worker class is generated to run the
-        experiment on a secondary thread to keep the GUI responsive.
+        Runs an experiment created in the 'Experiment' tab. Output data files are generated with a header containing
+        sample information. The sequences in the Experiment treewidget are parsed and then each command is run in
+        sequence. An instance of the corresponding spectrometer/PPMS Worker class is generated within the
+        coresponding function to run the selected command on a secondary thread to keep the GUI responsive.
         """
-        # Generate directory to hold output data files
-        self.create_data_directory()
 
-        # Parse TreeWidget ----------------------------------------------------------------------
-
-        # Get number of sequences in TreeWidget
-        num_seq = self.exptTreeWidget.topLevelItemCount()
-
-        # If TreeWidget is empty show error messagebox
-        if num_seq == 0:
-            msg_text = 'No sequences selected in \'Experiment\' tab!'
-            self.show_dialog(msg_text)
-        else:
-            # Get sequence names and number of repeats from TreeWidget
-            seq_filenames = np.empty(num_seq, dtype=object)
-            seq_names = np.empty(num_seq, dtype=object)
-            seq_name_short = np.empty(num_seq, dtype=object)
-            num_reps = np.empty(num_seq)
-
-            for i in range(num_seq):
-                # Get each item in TreeWidget
-                item = self.exptTreeWidget.topLevelItem(i)
-                seq_name = item.text(0)
-                repeats = item.text(1)
-
-                # Generate data file for each sequence
-                self.create_data_file(seq_name[:-4], int(repeats))
-
-                # Add filenames to array
-                seq_name_short[i] = seq_name.split('.')[0]
-                seq_names[i] = seq_name
-                seq_filenames[i] = self.default_seq_filepath + seq_name
-
-                # Add number of repeats to array
-                num_reps[i] = int(repeats)
-
-            # Reformat data filenames   ----------------------------------------------------------------
-            # Get max reps
-            max_reps = int(np.max(num_reps))
-            # Generate empty filename array of correct shape
-            self.data_file_cache = np.empty((num_seq, max_reps), dtype=object)
-
-            # Populate array with filenames
-            for i in range(num_seq):
-                # Initialise loop variable
-                k = 0
-                while k < num_reps[i]:
-                    filepath = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name_short[i] + '_expt{}'.format(k+1) +'.txt'
-                    print(filepath)
-                    # Add to cache
-                    self.data_file_cache[i, k] = filepath
-                    # Increment
-                    k += 1
-
-            # Reformat data from .seq files ----------------------------------------------------------------
-
-            # Read data from files
-            parameter_values = np.zeros(self.num_parameters)
-
-            for seq_name in seq_filenames:
-                data = np.loadtxt(seq_name)
-                parameter_values = np.vstack((parameter_values, data))
-
-            # Delete first row of array
-            parameter_values = np.delete(parameter_values, 0, axis=0)
-
-            # Delete phase for debugging purposes
-            parameter_values = np.delete(parameter_values, 1, axis=1)
-
-            # Construct 2D array of reg tuples - (reg_number, value)
-            regs_to_update = np.array([1, 2, 3, 5, 7])
-            reg_vals = np.empty((regs_to_update.size, num_seq), dtype=tuple)
-            for i in range(regs_to_update.size):
-                for j in range(num_seq):
-                    # Generate
-                    pair = (regs_to_update[i], int(parameter_values[j, i]))
-                    reg_vals[i, j] = pair
-
-            # Multi threading code to run experiment --------------------------------------------------------
+        def run_NMR_sequence(reg_vals, num_reps, seq_names):
+            """
+            Runs an NMR sequence in a separate thread.
+            """
 
             # Create QThread object
             self.thread = QThread()
             # Create Worker instance
-            self.worker = SpecMRWorker(self.device, reg_vals, num_reps, self.data_file_cache, seq_name_short)
+            self.worker = SpecMRWorker(self.device, reg_vals, num_reps, self.data_file_cache, seq_names)
             # Move worker to thread
             self.worker.moveToThread(self.thread)
             # Connect signals and slots
@@ -588,6 +517,157 @@ class RunApp(Ui_mainWindow):
             self.runExptBtn.setEnabled(False)
             # On thread finished reset experiment tab
             self.thread.finished.connect(self.reset_expt_tab)
+
+        def run_PPMS_command(typ, val):
+            """
+            Runs a PPMS command in a separate thread.
+            """
+            pass
+
+        # Generate directory to hold output data files
+        self.create_data_directory()
+
+        # Get number of commands in TreeWidget
+        num_commands = self.exptTreeWidget.topLevelItemCount()
+
+        # If TreeWidget is empty show error messagebox
+        if num_commands == 0:
+            msg_text = 'No commands selected in \'Experiment\' tab!'
+            self.show_dialog(msg_text)
+        else:
+
+            # Loop through TreeWidget commands
+            for i in range(num_commands):
+                item = self.exptTreeWidget.topLevelItem(i)
+
+                command_type = item.text(0)
+
+                # Check if command is NMR or PPMS
+                if command_type == 'NMR':
+                    # Get sequence name and repeats
+                    seq_name = item.text(1)
+                    repeats = item.text(2)
+
+                    # Make output data file
+                    self.create_data_file(seq_name, int(repeats))
+
+                    # Read sequence from file
+                    sequence_vals = np.loadtxt(self.default_seq_filepath + seq_name + '.seq')
+                    # Delete phase since it is not implemented yet
+                    sequence_vals = np.delete(sequence_vals, 1)
+
+                    # Construct tuples of (Register, value) pairs
+                    register_values = np.empty(sequence_vals.size, dtype=object)
+                    for j, t in enumerate(zip(self.registers, sequence_vals)):
+                        register_values[j] = (t[0], t[1])
+
+                    # Begin NMR sequence thread
+                    run_NMR_sequence(register_values, repeats, seq_name)
+
+
+                else:
+                    # Check if command is temperature or field
+                    command = item.text(1)
+                    if 'Temperature' in command:
+                        # Extract set value
+                        value = command.split(' ')[-2][:-1]
+                        # Run temperaturePPMS command
+                        run_PPMS_command('T', value)
+
+                    else:
+                        # Extract set value
+                        value = command.split(' ')[-2][:-2]
+                        # Run field PPMS command
+                        run_PPMS_command('F', value)
+
+
+
+
+
+
+        # OLD
+        """# Parse TreeWidget to obtain NMR and PPMS commands ----------------------------------------------------------
+        
+        # Get number of commands in TreeWidget
+        num_commands = self.exptTreeWidget.topLevelItemCount()
+
+        # If TreeWidget is empty show error messagebox
+        if num_commands == 0:
+            msg_text = 'No commands selected in \'Experiment\' tab!'
+            self.show_dialog(msg_text)
+        else:
+            # Get command type, names and number of repeats from TreeWidget
+            NMR_filenames = np.empty(num_commands, dtype=object)
+            NMR_seq_names = np.empty(num_commands, dtype=object)
+            num_reps = np.empty(num_commands)
+
+            for i in range(num_commands):
+                # Get each item in TreeWidget
+                item = self.exptTreeWidget.topLevelItem(i)
+
+                command_type = item.text(0)
+                seq_name = item.text(1)
+                repeats = item.text(2)
+
+                if command_type == 'NMR':
+                    # Generate data file for each NMR sequence
+                    self.create_data_file(seq_name, int(repeats))
+
+                    # Add filenames to array
+                    NMR_seq_names[i] = seq_name
+                    NMR_filenames[i] = self.default_seq_filepath + seq_name + '.seq'
+
+                    # Add number of repeats to array
+                    num_reps[i] = int(repeats)
+
+                else:
+                    pass
+
+            # Reformat data filenames   ----------------------------------------------------------------
+            # Get max reps
+            max_reps = int(np.max(num_reps))
+            # Generate empty filename array of correct shape
+            self.data_file_cache = np.empty((num_commands, max_reps), dtype=object)
+
+            # Populate array with filenames
+            for i in range(num_commands):
+                # Initialise loop variable
+                k = 0
+                while k < num_reps[i]:
+                    filepath = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + NMR_seq_names[i] + '_expt{}'.format(k+1) +'.txt'
+                    print(filepath)
+                    # Add to cache
+                    self.data_file_cache[i, k] = filepath
+                    # Increment
+                    k += 1
+
+            # Reformat data from .seq files ----------------------------------------------------------------
+
+            # Read data from files
+            parameter_values = np.zeros(self.num_parameters)
+
+            for seq_name in NMR_filenames:
+                data = np.loadtxt(seq_name)
+                parameter_values = np.vstack((parameter_values, data))
+
+            # Delete first row of array
+            parameter_values = np.delete(parameter_values, 0, axis=0)
+
+            # Delete phase for debugging purposes
+            parameter_values = np.delete(parameter_values, 1, axis=1)
+
+            # Construct 2D array of reg tuples - (reg_number, value)
+            regs_to_update = np.array([1, 2, 3, 5, 7])
+            reg_vals = np.empty((regs_to_update.size, num_commands), dtype=tuple)
+            for i in range(regs_to_update.size):
+                for j in range(num_commands):
+                    # Generate
+                    pair = (regs_to_update[i], int(parameter_values[j, i]))
+                    reg_vals[i, j] = pair
+
+            # Multi threading code to run command --------------------------------------------------------
+            run_NMR_sequence(reg_vals, num_reps, NMR_seq_names)"""
+
 
     def select_live_sequence(self):
         # Open file dialog
