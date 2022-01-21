@@ -42,37 +42,37 @@ class SpecMRWorker(QObject):
         k = 0
         # Loop for number of repeats
         while k < self.num_reps:
-            # Write reg values to device
-            for j in self.reg_vals:
 
-                # Write data to SDR14 registers
+            # Loop for each register
+            for j in self.reg_vals:
+                # Write data to SDR14 register
                 self.device.reg_write(*j)
 
-                # Emit expt info
-                self.expt_info.emit(self.seq_name, k + 1)
+            # Emit expt info
+            self.expt_info.emit(self.seq_name, k + 1)
 
-                # Enable device
-                self.device.enable_dev()
+            # Enable device
+            self.device.enable_dev()
 
-                """
-                # Start MR acquisition
-                ch1_data, ch2_data = self.device.MR_acquisition()
-                # Save to file
-                self.save_data_to_file(self.data_filepaths[i, k], ch1_data, ch2_data)
+            """
+            # Start MR acquisition
+            ch1_data, ch2_data = self.device.MR_acquisition()
+            # Save to file
+            self.save_data_to_file(self.data_filepaths[i, k], ch1_data, ch2_data)
 
-                print('Sequence name: {}'.format(self.seq_names[i]))
-                print('Experiment number: {}'.format(k + 1))
-                print('Data file path: {}'.format(self.data_filepaths[i, k]))"""
+            print('Sequence name: {}'.format(self.seq_names[i]))
+            print('Experiment number: {}'.format(k + 1))
+            print('Data file path: {}'.format(self.data_filepaths[i, k]))"""
 
-                time.sleep(5)
+            time.sleep(5)
 
-                # Disable device
-                self.device.disable_dev()
-                print('Device disabled')
-                time.sleep(5)
-                self.clear_console()
-                # Increment k
-                k += 1
+            # Disable device
+            self.device.disable_dev()
+            print('Device disabled')
+            time.sleep(5)
+            self.clear_console()
+            # Increment k
+            k += 1
 
         print('Experiment finished!')
 
@@ -496,6 +496,7 @@ class RunApp(Ui_mainWindow):
             """
             Runs an NMR sequence in a separate thread.
             """
+            self.NMR_thread_active = True
 
             # Create QThread object
             self.thread = QThread()
@@ -552,7 +553,7 @@ class RunApp(Ui_mainWindow):
                     self.create_data_file(seq_name, int(repeats))
 
                     # Read sequence from file
-                    sequence_vals = np.loadtxt(self.default_seq_filepath + seq_name + '.seq')
+                    sequence_vals = np.loadtxt(self.default_seq_filepath + seq_name + '.seq', dtype=int)
                     # Delete phase since it is not implemented yet
                     sequence_vals = np.delete(sequence_vals, 1)
 
@@ -561,8 +562,7 @@ class RunApp(Ui_mainWindow):
                     for j, t in enumerate(zip(self.registers, sequence_vals)):
                         register_values[j] = (t[0], t[1])
 
-                    # Begin NMR sequence thread
-                    run_NMR_sequence(register_values, repeats, seq_name)
+                        run_NMR_sequence(register_values, repeats, seq_name)
 
 
                 else:
@@ -604,6 +604,8 @@ class RunApp(Ui_mainWindow):
             for i in range(num_commands):
                 # Get each item in TreeWidget
                 item = self.exptTreeWidget.topLevelItem(i)
+                seq_name = item.text(0)
+                repeats = item.text(1)
 
                 command_type = item.text(0)
                 seq_name = item.text(1)
