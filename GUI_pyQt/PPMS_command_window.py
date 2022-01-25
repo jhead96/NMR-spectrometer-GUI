@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'PPMS_command_window.ui'
+# Form implementation generated from reading ui file 'ppms_command_window.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.2
 #
@@ -92,26 +92,37 @@ class Ui_PPMSCommandWindow(object):
         self.valLineEdit.setMaximumSize(QtCore.QSize(100, 16777215))
         self.valLineEdit.setObjectName("valLineEdit")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.valLineEdit)
+        spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        self.formLayout.setItem(3, QtWidgets.QFormLayout.LabelRole, spacerItem4)
         self.returnBtn = QtWidgets.QPushButton(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.returnBtn.sizePolicy().hasHeightForWidth())
         self.returnBtn.setSizePolicy(sizePolicy)
-        self.returnBtn.setMinimumSize(QtCore.QSize(125, 0))
+        self.returnBtn.setMinimumSize(QtCore.QSize(125, 25))
         self.returnBtn.setObjectName("returnBtn")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.returnBtn)
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.returnBtn)
         self.acceptBtn = QtWidgets.QPushButton(self.frame)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.acceptBtn.sizePolicy().hasHeightForWidth())
         self.acceptBtn.setSizePolicy(sizePolicy)
-        self.acceptBtn.setMinimumSize(QtCore.QSize(125, 0))
+        self.acceptBtn.setMinimumSize(QtCore.QSize(125, 25))
         self.acceptBtn.setObjectName("acceptBtn")
-        self.formLayout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.acceptBtn)
-        spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
-        self.formLayout.setItem(2, QtWidgets.QFormLayout.LabelRole, spacerItem4)
+        self.formLayout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.acceptBtn)
+        self.label = QtWidgets.QLabel(self.frame)
+        self.label.setObjectName("label")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.label)
+        self.lineEdit = QtWidgets.QLineEdit(self.frame)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.lineEdit.sizePolicy().hasHeightForWidth())
+        self.lineEdit.setSizePolicy(sizePolicy)
+        self.lineEdit.setObjectName("lineEdit")
+        self.formLayout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.lineEdit)
         self.gridLayout.addWidget(self.frame, 1, 1, 1, 1)
         PPMSCommandWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(PPMSCommandWindow)
@@ -131,6 +142,7 @@ class Ui_PPMSCommandWindow(object):
         self.valLbl.setText(_translate("PPMSCommandWindow", "Set Value"))
         self.returnBtn.setText(_translate("PPMSCommandWindow", "Return"))
         self.acceptBtn.setText(_translate("PPMSCommandWindow", "Accept"))
+        self.label.setText(_translate("PPMSCommandWindow", "Rate"))
 
 
 if __name__ == "__main__":
