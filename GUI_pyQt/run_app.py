@@ -132,6 +132,8 @@ class SpecLiveWorker(QObject):
 class PPMSWorker(QObject):
     # Finished signal
     finished = pyqtSignal()
+    # Command info signal
+    command_info = pyqtSignal(object)
 
     def __init__(self, parameter, value):
         super().__init__()
@@ -140,10 +142,14 @@ class PPMSWorker(QObject):
 
     def set_value(self):
 
+
+
         if self.parameter == 'T':
+            self.command_info.emit(f'Set temperature to {self.value}K ')
             time.sleep(5)
             print(f'PPMS worker thread: Setting temp to {self.value}K finished!')
         else:
+            self.command_info.emit(f'Set field to {self.value}Oe ')
             time.sleep(5)
             print(f'PPMS worker thread: Setting field to {self.value}Oe finished!')
 
@@ -702,9 +708,6 @@ class RunApp(Ui_mainWindow):
             self.run_command()
             self.runExptBtn.setEnabled(False)
 
-    def test(self):
-        print('Thread Destroyed')
-
     def run_command(self):
 
         def run_NMR_sequence(reg_vals, num_reps, seq_names):
@@ -735,24 +738,21 @@ class RunApp(Ui_mainWindow):
 
             # Create QThread object
             self.thread = QThread()
-            print('1')
             # Create Worker instance for PPMS
             self.worker = PPMSWorker(parameter, value)
-            print('2')
             # Move worker to thread
             self.worker.moveToThread(self.thread)
-            print('3')
+
             # Connect signals and slots
             self.thread.started.connect(self.worker.set_value)
             self.worker.finished.connect(self.thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
+            self.worker.expt_info.connect(self.update_expt_labels)
             self.thread.destroyed.connect(self.run_command)
-            #self.worker.finished.connect(self.run_command)
             self.thread.finished.connect(self.thread.deleteLater)
-            print('4')
+
             # Start thread
             self.thread.start()
-            print('5')
 
         print(f'Current command: {self.current_command}')
 
@@ -786,7 +786,6 @@ class RunApp(Ui_mainWindow):
 
                 run_NMR_sequence(register_values, repeats, seq_name)
 
-
             else:
                 # Check if command is temperature or field
                 command = item.text(1)
@@ -802,12 +801,9 @@ class RunApp(Ui_mainWindow):
                     # Run field PPMS command
                     run_PPMS_command('F', value)
 
-
         else:
             print('Main Thread: Experiment finished!')
             self.reset_expt_tab()
-
-
 
     def select_live_sequence(self):
         # Open file dialog
@@ -965,7 +961,7 @@ class RunApp(Ui_mainWindow):
         self.currentSeqLbl.setText('Current Sequence: ')
         self.currentRepeatLbl.setText('Current Repeat: ')
 
-    def update_expt_labels(self, seq_name, repeat):
+    def update_expt_labels(self, seq_name, repeat='--'):
         """
         Updates the 'Experiment' tab labels during the experiment.
         """
