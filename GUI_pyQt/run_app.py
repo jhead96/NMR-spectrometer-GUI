@@ -135,21 +135,20 @@ class PPMSWorker(QObject):
     # Command info signal
     command_info = pyqtSignal(object)
 
-    def __init__(self, parameter, value):
+    def __init__(self, parameter, value, rate):
         super().__init__()
         self.parameter = parameter
         self.value = value
+        self.rate = rate
 
     def set_value(self):
 
-
-
         if self.parameter == 'T':
-            self.command_info.emit(f'Set temperature to {self.value}K ')
+            self.command_info.emit(f'Set temperature to {self.value}K at rate {self.rate}K/s ')
             time.sleep(5)
             print(f'PPMS worker thread: Setting temp to {self.value}K finished!')
         else:
-            self.command_info.emit(f'Set field to {self.value}Oe ')
+            self.command_info.emit(f'Set field to {self.value}Oe at rate {self.rate}Oe/s ')
             time.sleep(5)
             print(f'PPMS worker thread: Setting field to {self.value}Oe finished!')
 
@@ -409,14 +408,14 @@ class RunApp(Ui_mainWindow):
         self.ui.submitted.connect(self.add_PPMS_command_to_expt)
         self.ppms_window.show()
 
-    def add_PPMS_command_to_expt(self, parameter, value):
+    def add_PPMS_command_to_expt(self, parameter, value, rate):
         self.ppms_window.destroy()
 
         if parameter == '0':
-            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Temperature', f'Set Temperature to {value}K ', '--'])
+            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Temperature', f'Set Temperature to {value}K.\nRate: {rate}K/s.', '--'])
             self.exptTreeWidget.addTopLevelItem(item)
         else:
-            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Magnetic Field', f'Set Magnetic Field to {value}Oe ', '--'])
+            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Magnetic Field', f'Set Magnetic Field to {value}Oe.\nRate: {rate}Oe/s.', '--'])
             self.exptTreeWidget.addTopLevelItem(item)
 
     def remove_command(self):
@@ -731,7 +730,7 @@ class RunApp(Ui_mainWindow):
             # Start thread
             self.thread.start()
 
-        def run_PPMS_command(parameter, value):
+        def run_PPMS_command(parameter, value, rate):
             """
             Runs a PPMS command in a separate thread.
             """
@@ -739,7 +738,7 @@ class RunApp(Ui_mainWindow):
             # Create QThread object
             self.thread = QThread()
             # Create Worker instance for PPMS
-            self.worker = PPMSWorker(parameter, value)
+            self.worker = PPMSWorker(parameter, value, rate)
             # Move worker to thread
             self.worker.moveToThread(self.thread)
 
@@ -747,7 +746,7 @@ class RunApp(Ui_mainWindow):
             self.thread.started.connect(self.worker.set_value)
             self.worker.finished.connect(self.thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
-            self.worker.expt_info.connect(self.update_expt_labels)
+            self.worker.command_info.connect(self.update_expt_labels)
             self.thread.destroyed.connect(self.run_command)
             self.thread.finished.connect(self.thread.deleteLater)
 
@@ -791,15 +790,27 @@ class RunApp(Ui_mainWindow):
                 command = item.text(1)
                 if 'Temperature' in command:
                     # Extract set value
-                    value = command.split(' ')[-2][:-1]
+                    value_str = command.split('\n')[0]
+                    value = value_str.split(' ')[-1][:-2]
+
+                    # Extract rate
+                    rate_str = command.split('\n')[1]
+                    rate = rate_str.split(' ')[1][:-4]
+
                     # Run temperature PPMS command
-                    run_PPMS_command('T', value)
+                    run_PPMS_command('T', value, rate)
 
                 else:
                     # Extract set value
-                    value = command.split(' ')[-2][:-2]
+                    value_str = command.split('\n')[0]
+                    value = value_str.split(' ')[-1][:-3]
+
+                    # Extract rate
+                    rate_str = command.split('\n')[1]
+                    rate = rate_str.split(' ')[1][:-5]
+
                     # Run field PPMS command
-                    run_PPMS_command('F', value)
+                    run_PPMS_command('F', value, rate)
 
         else:
             print('Main Thread: Experiment finished!')

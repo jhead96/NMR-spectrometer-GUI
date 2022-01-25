@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>336</width>
-    <height>216</height>
+    <width>510</width>
+    <height>230</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -233,7 +233,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>40</height>
+           <height>20</height>
           </size>
          </property>
         </spacer>
@@ -277,19 +277,43 @@
         </widget>
        </item>
        <item row="2" column="0">
-        <widget class="QLabel" name="label">
+        <widget class="QLabel" name="rateLbl">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>125</width>
+           <height>0</height>
+          </size>
+         </property>
          <property name="text">
-          <string>Rate</string>
+          <string>Rate (units / s)</string>
          </property>
         </widget>
        </item>
        <item row="2" column="1">
-        <widget class="QLineEdit" name="lineEdit">
+        <widget class="QLineEdit" name="rateLineEdit">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+          <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>125</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>125</width>
+           <height>16777215</height>
+          </size>
          </property>
         </widget>
        </item>

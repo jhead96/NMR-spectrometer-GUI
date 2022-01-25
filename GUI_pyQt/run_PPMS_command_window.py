@@ -4,7 +4,7 @@ from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 class runPPMSCommandWindow(Ui_PPMSCommandWindow, QObject):
 
-    submitted = pyqtSignal(str, str)
+    submitted = pyqtSignal(str, str, str)
 
     def __init__(self, window):
 
@@ -24,32 +24,38 @@ class runPPMSCommandWindow(Ui_PPMSCommandWindow, QObject):
         try:
             value = float(self.valLineEdit.text())
         except:
-            self.show_dialog('Invalid value!')
             value = 1e6
+
+        # Check if rate is a float
+        try:
+            rate = float(self.lineEdit.text())
+        except:
+            rate = 0
 
         valid = 0
         # Check temperature and field values are valid
-        # T range: 2K - 400K
+        # T range: 2K - 400K, rate: 2K/s - 20K/s
         if parameter == 0:
-            if 2 <= value <= 400:
+            if (2 <= value <= 400) and (2 <= rate <= 20):
                 valid = 1
         else:
             # Field range = -70,000Oe - 70,000Oe
-            if -70000 <= value <= 70000:
+            if -70000 <= value <= 70000 and (1 <= rate <= 500):
                 valid = 1
 
         if valid:
             # Send to main window
-            self.submitted.emit(str(parameter), str(value))
-            #print('Data sent!')
+            self.submitted.emit(str(parameter), str(value), str(rate))
         else:
             # Show error message
             if parameter == 0:
-                self.show_dialog('Invalid value. Temperature value must be between 2K - 400K')
+                self.show_dialog('Invalid value or rate.\n'
+                                 'Temperature value must be between 2K and 400K.\n'
+                                 'Temperature rate must be between 2K/s and 20K/s.')
             else:
-                self.show_dialog('Invalid value. Field value must be between -70,000Oe - 70,000Oe')
-
-
+                self.show_dialog('Invalid value or rate.\n'
+                                 'Field value must be between -70,000Oe - 70,000Oe.\n'
+                                 'Field rate must be between 1Oe/s and 500Oe/s.')
 
     def close_window(self):
         print('#')
