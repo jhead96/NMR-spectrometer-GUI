@@ -32,7 +32,6 @@ class SpecMRWorker(QObject):
         self.data_filepaths = data_filepaths
         self.seq_name = seq_name
 
-
     def run_expt(self):
         """
         Runs an experiment on the SDR14 using the parameters entered on the 'Experiment' tab of the GUI.
@@ -69,13 +68,13 @@ class SpecMRWorker(QObject):
             # Disable device
             self.device.disable_dev()
             print('Device disabled')
+            print('')
+            print('')
             time.sleep(5)
-            self.clear_console()
             # Increment k
             k += 1
 
-        print('Experiment finished!')
-
+        print(f'NMR Spectrometer worker thread: Sequence {self.seq_name} finished!')
         # Emit finished signal
         self.finished.emit()
 
@@ -89,12 +88,6 @@ class SpecMRWorker(QObject):
             np.savetxt(f, save_data, header='Ch 1 data, Ch 2 data', comments='', delimiter=',')
             f.close()
 
-    def clear_console(self):
-        """
-        Function that clears the Python console.
-        """
-        clear = "\n" * 100
-        print(clear)
 
 class SpecLiveWorker(QObject):
     """
@@ -135,6 +128,27 @@ class SpecLiveWorker(QObject):
         self.enabled = False
         self.device.disable_dev()
         self.finished.emit()
+
+class PPMSWorker(QObject):
+    # Finished signal
+    finished = pyqtSignal()
+
+    def __init__(self, parameter, value):
+        super().__init__()
+        self.parameter = parameter
+        self.value = value
+
+    def set_value(self):
+
+        if self.parameter == 'T':
+            time.sleep(5)
+            print(f'PPMS worker thread: Setting temp to {self.value}K finished!')
+        else:
+            time.sleep(5)
+            print(f'PPMS worker thread: Setting field to {self.value}Oe finished!')
+
+        self.finished.emit()
+
 
 class RunApp(Ui_mainWindow):
     """
@@ -186,7 +200,7 @@ class RunApp(Ui_mainWindow):
         self.exptTreeWidget.itemDoubleClicked.connect(self.display_command)
 
         # Run tab
-        self.runExptBtn.clicked.connect(self.run_expt)
+        self.runExptBtn.clicked.connect(self.run_expt_new)
 
         # Data tab
         self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
@@ -214,6 +228,10 @@ class RunApp(Ui_mainWindow):
 
         # Initialise registers to be updated on FPGA
         self.registers = np.array([1, 2, 3, 5, 7])
+
+        # Initialise command count and command count
+        self.current_command = 0
+        self.command_count = 0
 
         # Initialise sample parameters
         self.sample_name = ''
@@ -386,8 +404,6 @@ class RunApp(Ui_mainWindow):
         self.ppms_window.show()
 
     def add_PPMS_command_to_expt(self, parameter, value):
-        #print(parameter)
-        #print(value)
         self.ppms_window.destroy()
 
         if parameter == '0':
@@ -476,7 +492,7 @@ class RunApp(Ui_mainWindow):
                                                             '<tr><td>Pulse 2 length (ns)</td><td>{}</td></tr>' \
                                                             '<tr><td>Gap length (ns)</td><td>{}</td></tr>' \
                                                             '<tr><td>Record length (ns)</td><td>{}</td></tr>' \
-                                                            '</table>'.format(seq_data[0], seq_data[1],
+                                                            '</table>'.format(seq_data[0]/1e6, seq_data[1],
                                                                               seq_data[2], seq_data[3],
                                                                               seq_data[4], seq_data[5])
 
@@ -581,10 +597,6 @@ class RunApp(Ui_mainWindow):
                         run_PPMS_command('F', value)
 
 
-
-
-
-
         # OLD
         """# Parse TreeWidget to obtain NMR and PPMS commands ----------------------------------------------------------
         
@@ -669,6 +681,132 @@ class RunApp(Ui_mainWindow):
 
             # Multi threading code to run command --------------------------------------------------------
             run_NMR_sequence(reg_vals, num_reps, NMR_seq_names)"""
+
+    def run_expt_new(self):
+
+        # Reset command count
+        self.current_command = 0
+
+        # Generate directory to hold output data files
+        self.create_data_directory()
+
+        # Check if command list is empty
+        self.command_count = self.exptTreeWidget.topLevelItemCount()
+
+        # If TreeWidget is empty show error messagebox
+        if self.command_count == 0:
+            msg_text = 'No commands selected in \'Experiment\' tab!'
+            self.show_dialog(msg_text)
+        else:
+            # Run first command in the list
+            self.run_command()
+            self.runExptBtn.setEnabled(False)
+
+    def test(self):
+        print('Thread Destroyed')
+
+    def run_command(self):
+
+        def run_NMR_sequence(reg_vals, num_reps, seq_names):
+            """
+            Runs an NMR sequence in a separate thread.
+            """
+            # Create QThread object
+            self.thread = QThread()
+            # Create Worker instance for spectrometer
+            self.worker = SpecMRWorker(self.device, reg_vals, num_reps, self.data_file_cache, seq_names)
+            # Move worker to thread
+            self.worker.moveToThread(self.thread)
+            # Connect signals and slots
+            self.thread.started.connect(self.worker.run_expt)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.worker.data_out.connect(self.plot_data)
+            self.thread.destroyed.connect(self.run_command)
+            self.worker.expt_info.connect(self.update_expt_labels)
+            self.thread.finished.connect(self.thread.deleteLater)
+            # Start thread
+            self.thread.start()
+
+        def run_PPMS_command(parameter, value):
+            """
+            Runs a PPMS command in a separate thread.
+            """
+
+            # Create QThread object
+            self.thread = QThread()
+            print('1')
+            # Create Worker instance for PPMS
+            self.worker = PPMSWorker(parameter, value)
+            print('2')
+            # Move worker to thread
+            self.worker.moveToThread(self.thread)
+            print('3')
+            # Connect signals and slots
+            self.thread.started.connect(self.worker.set_value)
+            self.worker.finished.connect(self.thread.quit)
+            self.worker.finished.connect(self.worker.deleteLater)
+            self.thread.destroyed.connect(self.run_command)
+            #self.worker.finished.connect(self.run_command)
+            self.thread.finished.connect(self.thread.deleteLater)
+            print('4')
+            # Start thread
+            self.thread.start()
+            print('5')
+
+        print(f'Current command: {self.current_command}')
+
+        if self.current_command < self.command_count:
+            # Parse current command
+            item = self.exptTreeWidget.topLevelItem(self.current_command)
+
+            command_type = item.text(0)
+
+            # Increment current command counter
+            self.current_command += 1
+
+            # Check if command is NMR or PPMS
+            if command_type == 'NMR':
+                # Get sequence name and repeats
+                seq_name = item.text(1)
+                repeats = item.text(2)
+
+                # Make output data file
+                self.create_data_file(seq_name, int(repeats))
+
+                # Read sequence from file
+                sequence_vals = np.loadtxt(self.default_seq_filepath + seq_name + '.seq', dtype=int)
+                # Delete phase since it is not implemented yet
+                sequence_vals = np.delete(sequence_vals, 1)
+
+                # Construct tuples of (Register, value) pairs
+                register_values = np.empty(sequence_vals.size, dtype=object)
+                for j, t in enumerate(zip(self.registers, sequence_vals)):
+                    register_values[j] = (t[0], t[1])
+
+                run_NMR_sequence(register_values, repeats, seq_name)
+
+
+            else:
+                # Check if command is temperature or field
+                command = item.text(1)
+                if 'Temperature' in command:
+                    # Extract set value
+                    value = command.split(' ')[-2][:-1]
+                    # Run temperature PPMS command
+                    run_PPMS_command('T', value)
+
+                else:
+                    # Extract set value
+                    value = command.split(' ')[-2][:-2]
+                    # Run field PPMS command
+                    run_PPMS_command('F', value)
+
+
+        else:
+            print('Main Thread: Experiment finished!')
+            self.reset_expt_tab()
+
 
 
     def select_live_sequence(self):
