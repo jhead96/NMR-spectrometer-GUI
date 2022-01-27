@@ -2,7 +2,6 @@ import pyvisa
 import numpy as np
 
 
-
 class PPMSController:
 
     def __init__(self):
@@ -26,9 +25,6 @@ class PPMSController:
             self.connected = True
         except:
             print('No device found!')
-
-
-
 
     def test_connection(self):
         pass
