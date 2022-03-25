@@ -82,9 +82,9 @@ class PPMSController:
             field_status = 0
             while field_status != 1:
                 # Get field info and print
-                temp_info = self.PPMS.query('GetDat? 4')
-                t = temp_info.split(',')[1]
-                B = temp_info.split(',')[2][:-1]
+                field_info = self.PPMS.query('GetDat? 4')
+                t = field_info.split(',')[1]
+                B = field_info.split(',')[2][:-1]
 
                 print()
                 print(f'Timestamp: {t}s')
@@ -95,7 +95,7 @@ class PPMSController:
                 system_status = self.PPMS.query('GetDat? 1')
                 system_state = int(system_status.split(',')[-1][:-1])
                 temp_status, field_status = self.decode_state(system_state)
-                print(f'Field status = {temp_status}')
+                print(f'Field status = {field_status}')
 
                 time.sleep(2)
 
