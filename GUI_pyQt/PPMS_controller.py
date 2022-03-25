@@ -61,16 +61,45 @@ class PPMSController:
 
                 system_status = self.PPMS.query('GetDat? 1')
                 system_state = int(system_status.split(',')[-1][:-1])
-                temp_status = self.decode_state(system_state)
+                temp_status, field_status = self.decode_state(system_state)
                 print(f'Temp status = {temp_status}')
 
                 time.sleep(2)
 
-            print(f'Temperature stabilised at {set_point}')
+            print(f'Temperature stabilised at {set_point}K')
 
 
-    def set_field(self):
-        pass
+    def set_field(self, set_point, rate):
+        # Test connection
+
+        if self.connected:
+
+            # Write GPIB command
+            self.PPMS.write(f'FIELD {str(set_point)} {str(rate)} 0')
+
+            # Measure
+
+            field_status = 0
+            while field_status != 1:
+                # Get field info and print
+                temp_info = self.PPMS.query('GetDat? 4')
+                t = temp_info.split(',')[1]
+                B = temp_info.split(',')[2][:-1]
+
+                print()
+                print(f'Timestamp: {t}s')
+                print(f'Magnetic Field: {B}Oe')
+                print()
+
+                # Check field state
+                system_status = self.PPMS.query('GetDat? 1')
+                system_state = int(system_status.split(',')[-1][:-1])
+                temp_status, field_status = self.decode_state(system_state)
+                print(f'Field status = {temp_status}')
+
+                time.sleep(2)
+
+            print(f'Field stabilised at {set_point} Oe')
 
     def check_helium_level(self):
         pass
@@ -86,8 +115,9 @@ class PPMSController:
         pos_state = state_binary[0:4]
 
         temp_state_dec = int(temp_state, 2)
+        field_state_dec = int(field_state, 2)
 
-        return temp_state_dec
+        return temp_state_dec, field_state_dec
 
 
 x = PPMSController()
