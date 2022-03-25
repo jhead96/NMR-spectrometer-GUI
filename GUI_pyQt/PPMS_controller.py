@@ -1,6 +1,6 @@
 import pyvisa
 import numpy as np
-
+import time
 
 class PPMSController:
 
@@ -24,7 +24,8 @@ class PPMSController:
             self.PPMS.read_termination = ''
             self.connected = True
         except:
-            print('No device found!')
+            print('No PPMS found!')
+            self.connected = False
 
     def test_connection(self):
         pass
@@ -32,8 +33,41 @@ class PPMSController:
     def get_temp(self):
         pass
 
-    def set_temp(self):
-        pass
+    def set_temp(self, set_point, rate):
+
+        # Test connection
+
+        if self.connected:
+
+            # Write GPIB command
+            self.PPMS.write(f'TEMP {str(set_point)} {str(rate)} 0')
+
+            # Measure
+
+            temp_status = 0
+            while temp_status != 1:
+
+                # Get temp info and print
+                temp_info = self.PPMS.query('GetDat? 2')
+                t = temp_info.split(',')[1]
+                T = temp_info.split(',')[2][:-1]
+
+                print()
+                print(f'Timestamp: {t}s')
+                print(f'Temperature: {T}K')
+                print()
+
+                # Check temp state
+
+                system_status = self.PPMS.query('GetDat? 1')
+                system_state = int(system_status.split(',')[-1][:-1])
+                temp_status = self.decode_state(system_state)
+                print(f'Temp status = {temp_status}')
+
+                time.sleep(2)
+
+            print(f'Temperature stabilised at {set_point}')
+
 
     def set_field(self):
         pass
@@ -41,8 +75,19 @@ class PPMSController:
     def check_helium_level(self):
         pass
 
+    @staticmethod
     def decode_state(self, state):
-        pass
+
+        state_binary = f'{state:016b}'
+
+        temp_state = state_binary[12:16]
+        field_state = state_binary[8:12]
+        chamber_state = state_binary[4:8]
+        pos_state = state_binary[0:4]
+
+        temp_state_dec = int(temp_state, 2)
+
+        return temp_state_dec
 
 
 x = PPMSController()
