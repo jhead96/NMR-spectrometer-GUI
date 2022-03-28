@@ -31,7 +31,15 @@ class PPMSController:
         pass
 
     def get_temp(self):
-        pass
+
+        temp_info = self.PPMS.query('GetDat? 2')
+        T = temp_info.split(',')[2][:-1]
+
+        system_status = self.PPMS.query('GetDat? 1')
+        system_state = int(system_status.split(',')[-1][:-1])
+        temp_status, field_status = self.decode_state(system_state)
+
+        return T, temp_status
 
     def set_temp(self, set_point, rate):
 
@@ -58,7 +66,6 @@ class PPMSController:
                 print()
 
                 # Check temp state
-
                 system_status = self.PPMS.query('GetDat? 1')
                 system_state = int(system_status.split(',')[-1][:-1])
                 temp_status, field_status = self.decode_state(system_state)
@@ -67,7 +74,6 @@ class PPMSController:
                 time.sleep(2)
 
             print(f'Temperature stabilised at {set_point}K')
-
 
     def set_field(self, set_point, rate):
         # Test connection
@@ -100,6 +106,16 @@ class PPMSController:
                 time.sleep(2)
 
             print(f'Field stabilised at {set_point} Oe')
+
+    def get_field(self):
+        field_info = self.PPMS.query('GetDat? 4')
+        B = field_info.split(',')[2][:-1]
+
+        system_status = self.PPMS.query('GetDat? 1')
+        system_state = int(system_status.split(',')[-1][:-1])
+        temp_status, field_status = self.decode_state(system_state)
+
+        return B, field_status
 
     def check_helium_level(self):
         pass
