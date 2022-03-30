@@ -1,4 +1,4 @@
-from gui_6 import *
+from gui_7 import *
 from run_PPMS_command_window import *
 
 import sys
@@ -192,8 +192,8 @@ class RunApp(Ui_mainWindow):
         self.clearAllBtn.clicked.connect(self.clear_txt)
         self.loadSeqBtn.clicked.connect(self.load_seq_file)
         self.saveSeqBtn.clicked.connect(self.save_seq_file)
-        self.seqTabNextBtn.clicked.connect(self.next_tab)
-        self.seqTabReturnBtn.clicked.connect(self.prev_tab)
+        #self.seqTabNextBtn.clicked.connect(self.next_tab)
+        #self.seqTabReturnBtn.clicked.connect(self.prev_tab)
 
         # Experiment tab
         self.addSeqBtn.clicked.connect(self.add_spec_command)
@@ -206,14 +206,14 @@ class RunApp(Ui_mainWindow):
         self.runExptBtn.clicked.connect(self.run_expt)
 
         # Data tab
-        self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
-        self.updatePlotBtn.clicked.connect(self.plot_data)
+        #self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
+        #self.updatePlotBtn.clicked.connect(self.plot_data)
 
         # Live tab
-        self.startLivePlot.clicked.connect(self.start_live_plot)
-        self.endLivePlot.clicked.connect(self.end_live_plot)
+        #self.startLivePlot.clicked.connect(self.start_live_plot)
+        #self.endLivePlot.clicked.connect(self.end_live_plot)
         # CHANGE IN QTDESIGNER
-        self.pushButton.clicked.connect(self.select_live_sequence)
+        #self.pushButton.clicked.connect(self.select_live_sequence)
 
         # Check for SDR14 connection
         try:
@@ -243,6 +243,8 @@ class RunApp(Ui_mainWindow):
         self.num_parameters = 6
 
     def initialise_plot_widgets(self):
+        pass
+        """
         self.liveTimePlotWidget.canvas.ax.set_title('Signal from SDR14')
         self.liveTimePlotWidget.canvas.ax.set_xlabel('Sample number')
         self.liveTimePlotWidget.canvas.ax.set_ylabel('Signal')
@@ -250,6 +252,7 @@ class RunApp(Ui_mainWindow):
         self.liveFrqPlotWidget.canvas.ax.set_title('FFT of SDR14 signal')
         self.liveFrqPlotWidget.canvas.ax.set_xlabel('f (Hz)')
         self.liveFrqPlotWidget.canvas.ax.set_ylabel('Intensity (arb units)')
+        """
 
     def clear_txt(self):
         """
