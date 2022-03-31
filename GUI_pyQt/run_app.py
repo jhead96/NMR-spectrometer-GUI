@@ -11,6 +11,7 @@ from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 import ADQ_tools_lite
 
+
 class SpecMRWorker(QObject):
     """
     Class to handle interfacing with the SDR14 on a Worker thread.
@@ -88,6 +89,7 @@ class SpecMRWorker(QObject):
             np.savetxt(f, save_data, header='Ch 1 data, Ch 2 data', comments='', delimiter=',')
             f.close()
 
+
 class SpecLiveWorker(QObject):
     """
     Class to handle continuous data acquisition from SDR 14 on worker thread.
@@ -128,30 +130,55 @@ class SpecLiveWorker(QObject):
         self.device.disable_dev()
         self.finished.emit()
 
+
 class PPMSWorker(QObject):
     # Finished signal
     finished = pyqtSignal()
     # Command info signal
     command_info = pyqtSignal(object)
+    # Parameters signal
+    parameters = pyqtSignal(float, float)
 
-    def __init__(self, parameter, value, rate):
+
+    def __init__(self, parameter, value, rate, start_time=0):
         super().__init__()
         self.parameter = parameter
         self.value = value
         self.rate = rate
+        self.starting_value = 300.00
+        self.start_time = start_time
 
     def set_value(self):
 
         if self.parameter == 'T':
-            self.command_info.emit(f'Set temperature to {self.value}K at rate {self.rate}K/s ')
-            time.sleep(5)
+            self.command_info.emit(f'Setting temperature to {self.value}K at rate {self.rate}K/s ')
+
+            curr_val = self.starting_value
+            t = self.start_time
+            val_float = float(self.value)
+            rate_float = float(self.rate)
+            print(val_float <= curr_val)
+
+            while val_float <= curr_val:
+
+                curr_val -= rate_float
+                t += 1
+                #print(f'T={curr_val}K, t={t}s')
+                self.parameters.emit(t, curr_val)
+                time.sleep(1)
+
             print(f'PPMS worker thread: Setting temp to {self.value}K finished!')
+
         else:
-            self.command_info.emit(f'Set field to {self.value}Oe at rate {self.rate}Oe/s ')
-            time.sleep(5)
+            self.command_info.emit(f'Setting field to {self.value}Oe at rate {self.rate}Oe/s ')
+            time.sleep(1)
+
+
+
             print(f'PPMS worker thread: Setting field to {self.value}Oe finished!')
 
         self.finished.emit()
+
 
 class RunApp(Ui_mainWindow):
     """
@@ -168,6 +195,8 @@ class RunApp(Ui_mainWindow):
         self.initialise_plot_widgets()
         self.live_time_plot_ref = {"Channel A": None, "Channel B": None}
         self.live_frq_plot_ref = {"Channel A": None, "Channel B": None}
+        self.t_data = []
+        self.temp_data = []
 
         # Setup live plotting timer and data variables
         self.update_timer = QTimer()
@@ -216,11 +245,11 @@ class RunApp(Ui_mainWindow):
         #self.pushButton.clicked.connect(self.select_live_sequence)
 
         # Check for SDR14 connection
-        try:
+        """try:
             self.device = ADQ_tools_lite.sdr14()
         except IOError:
             self.device = None
-            print('No device connected!')
+            print('No device connected!')"""
 
         # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
@@ -244,15 +273,28 @@ class RunApp(Ui_mainWindow):
 
     def initialise_plot_widgets(self):
 
-        self.liveNMRPlotWidget.canvas.ax.set_title('Signal from SDR14')
-        self.liveNMRPlotWidget.canvas.ax.set_xlabel('Sample number')
-        self.liveNMRPlotWidget.canvas.ax.set_ylabel('Signal')
+        # Assign axes to variables
+        live_NMR_ax = self.liveNMRPlotWidget.canvas.ax
+        live_PPMS_ax_temp = self.livePPMSPlotWidget.canvas.ax
+        live_PPMS_ax_field = self.livePPMSPlotWidget.canvas.ax.twinx()
 
-        self.livePPMSPlotWidget.canvas.ax.twinx()
+        # Initialise NMR axes
+        live_NMR_ax.set_title('Signal from SDR14')
+        live_NMR_ax.set_xlabel('Sample number')
+        live_NMR_ax.set_ylabel('Signal')
 
-        self.livePPMSPlotWidget.canvas.ax.set_title('PPMS ')
-        self.livePPMSPlotWidget.canvas.ax.set_xlabel('Time (s)')
-        self.livePPMSPlotWidget.canvas.ax.set_ylabel('Temperature (K)')
+        # Initialise PPMS Temp axes
+        live_PPMS_ax_temp.set_title('PPMS')
+        live_PPMS_ax_temp.set_xlabel('Time (s)')
+        live_PPMS_ax_temp.set_ylabel('Temperature (K)', color='r')
+        live_PPMS_ax_field.spines['left'].set_color('red')
+        live_PPMS_ax_temp.tick_params(axis='y', colors='red')
+        live_PPMS_ax_temp.set_ylim([0, 300])
+
+        # Initialise PPMS Field axes
+        live_PPMS_ax_field.set_ylabel('Magnetic Field (Oe)', color='b')
+        live_PPMS_ax_field.spines['right'].set_color('blue')
+        live_PPMS_ax_field.tick_params(axis='y', colors='blue')
 
     def clear_txt(self):
         """
@@ -566,6 +608,7 @@ class RunApp(Ui_mainWindow):
             self.worker.finished.connect(self.thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.worker.command_info.connect(self.update_expt_labels)
+            self.worker.parameters.connect(self.update_live_PPMS_plot)
             self.thread.destroyed.connect(self.run_command)
             self.thread.finished.connect(self.thread.deleteLater)
 
@@ -637,6 +680,16 @@ class RunApp(Ui_mainWindow):
         else:
             print('Main Thread: Experiment finished!')
             self.reset_expt_tab()
+
+    def update_live_PPMS_plot(self, t, temp):
+        print(f'{t}s')
+        print(f'Temp = {temp}K')
+
+        self.t_data.append(t)
+        self.temp_data.append(temp)
+
+        self.livePPMSPlotWidget.canvas.ax.plot(self.t_data, self.temp_data, 'r.-')
+        self.livePPMSPlotWidget.canvas.draw()
 
     def select_live_sequence(self):
         # Open file dialog
@@ -957,6 +1010,7 @@ class RunApp(Ui_mainWindow):
         msgbox.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msgbox.exec()
 
+
 def close_GUI():
     """
     Disconnects devices from the PC as the GUI is closed.
@@ -964,6 +1018,7 @@ def close_GUI():
     # Remove connection to SDR-14 if connected
     if ui.device:
         ui.device.delete_cu()
+
 
 app = QtWidgets.QApplication(sys.argv)
 # Handle application close
