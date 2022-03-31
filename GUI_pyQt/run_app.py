@@ -243,16 +243,16 @@ class RunApp(Ui_mainWindow):
         self.num_parameters = 6
 
     def initialise_plot_widgets(self):
-        pass
-        """
-        self.liveTimePlotWidget.canvas.ax.set_title('Signal from SDR14')
-        self.liveTimePlotWidget.canvas.ax.set_xlabel('Sample number')
-        self.liveTimePlotWidget.canvas.ax.set_ylabel('Signal')
 
-        self.liveFrqPlotWidget.canvas.ax.set_title('FFT of SDR14 signal')
-        self.liveFrqPlotWidget.canvas.ax.set_xlabel('f (Hz)')
-        self.liveFrqPlotWidget.canvas.ax.set_ylabel('Intensity (arb units)')
-        """
+        self.liveNMRPlotWidget.canvas.ax.set_title('Signal from SDR14')
+        self.liveNMRPlotWidget.canvas.ax.set_xlabel('Sample number')
+        self.liveNMRPlotWidget.canvas.ax.set_ylabel('Signal')
+
+        self.livePPMSPlotWidget.canvas.ax.twinx()
+
+        self.livePPMSPlotWidget.canvas.ax.set_title('PPMS ')
+        self.livePPMSPlotWidget.canvas.ax.set_xlabel('Time (s)')
+        self.livePPMSPlotWidget.canvas.ax.set_ylabel('Temperature (K)')
 
     def clear_txt(self):
         """
