@@ -151,7 +151,7 @@ class PPMSWorker(QObject):
     def set_value(self):
 
         if self.parameter == 'T':
-            self.command_info.emit(f'Setting temperature to {self.value}K at rate {self.rate}K/s ')
+            self.command_info.emit(f'\nSet temp. to {self.value}K.\n Rate {self.rate}K/s. ')
 
             curr_val = self.starting_value
             t = self.start_time
@@ -290,11 +290,14 @@ class RunApp(Ui_mainWindow):
         live_PPMS_ax_field.spines['left'].set_color('red')
         live_PPMS_ax_temp.tick_params(axis='y', colors='red')
         live_PPMS_ax_temp.set_ylim([0, 300])
+        temp_line = live_PPMS_ax_temp.plot()
+
 
         # Initialise PPMS Field axes
         live_PPMS_ax_field.set_ylabel('Magnetic Field (Oe)', color='b')
         live_PPMS_ax_field.spines['right'].set_color('blue')
         live_PPMS_ax_field.tick_params(axis='y', colors='blue')
+        live_PPMS_ax_field.set_ylim([0, 70000])
 
     def clear_txt(self):
         """
