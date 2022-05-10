@@ -1,4 +1,4 @@
-from gui_7 import *
+from gui_8 import *
 from run_PPMS_command_window import *
 
 import sys
@@ -180,7 +180,7 @@ class PPMSWorker(QObject):
         self.finished.emit()
 
 
-class RunApp(Ui_mainWindow):
+class RunApp(Ui_MainWindow):
     """
     Class to handle operation of the GUI on the main thread.
     """
@@ -191,65 +191,48 @@ class RunApp(Ui_mainWindow):
         self.setupUi(window)
         self.dialog = QtWidgets.QInputDialog()
 
+
         # Setup graph widgets
         self.initialise_plot_widgets()
-        self.live_time_plot_ref = {"Channel A": None, "Channel B": None}
-        self.live_frq_plot_ref = {"Channel A": None, "Channel B": None}
-        self.t_data = []
-        self.temp_data = []
+        self.time_plot_line = {"Channel A": None, "Channel B": None}
+        self.frq_plot_line = {"Channel A": None, "Channel B": None}
 
         # Setup live plotting timer and data variables
-        self.update_timer = QTimer()
-        self.update_timer.timeout.connect(self.update_live_plot_on_timeout)
-        self.ch1_data = None
-        self.ch2_data = None
+        # self.update_timer = QTimer()
+        # self.update_timer.timeout.connect(self.update_live_plot_on_timeout)
+        # self.ch1_data = None
+        # self.ch2_data = None
 
         # Can this stuff be changed in qtdesigner?
-        self.mainTab.setCurrentIndex(0)
-        self.exptTextEdit.setReadOnly(True)
-        self.font = QtGui.QFont()
-        self.font.setPointSize(12)
-        self.exptTextEdit.setFont(self.font)
+        #self.mainTab.setCurrentIndex(0)
+        #self.exptTextEdit.setReadOnly(True)
+        #self.font = QtGui.QFont()
+        #self.font.setPointSize(12)
+        #self.exptTextEdit.setFont(self.font)
 
         # Connect buttons to functions
         # Sample tab
-        self.confirmSampleInfoBtn.clicked.connect(self.get_sample_info)
-        self.sampleTabNextBtn.clicked.connect(self.next_tab)
-        self.clearSampleInfoBtn.clicked.connect(self.clear_sample_info)
+        #self.confirmSampleInfoBtn.clicked.connect(self.get_sample_info)
+        #self.clearSampleInfoBtn.clicked.connect(self.clear_sample_info)
 
         # Sequence tab
         self.clearAllBtn.clicked.connect(self.clear_txt)
         self.loadSeqBtn.clicked.connect(self.load_seq_file)
         self.saveSeqBtn.clicked.connect(self.save_seq_file)
-        #self.seqTabNextBtn.clicked.connect(self.next_tab)
-        #self.seqTabReturnBtn.clicked.connect(self.prev_tab)
 
         # Experiment tab
-        self.addSeqBtn.clicked.connect(self.add_spec_command)
-        self.removeSeqBtn.clicked.connect(self.remove_command)
-        self.editSeqBtn.clicked.connect(self.edit_command)
-        self.pushButton_4.clicked.connect(self.add_PPMS_command)
-        self.exptTreeWidget.itemDoubleClicked.connect(self.display_command)
-
-        # Run tab
-        self.runExptBtn.clicked.connect(self.run_expt)
-
-        # Data tab
-        #self.browseDataFolderBtn.clicked.connect(self.get_data_directory)
-        #self.updatePlotBtn.clicked.connect(self.plot_data)
-
-        # Live tab
-        #self.startLivePlot.clicked.connect(self.start_live_plot)
-        #self.endLivePlot.clicked.connect(self.end_live_plot)
-        # CHANGE IN QTDESIGNER
-        #self.pushButton.clicked.connect(self.select_live_sequence)
+        self.addNMRCommandBtn.clicked.connect(self.add_NMR_command)
+        self.addPPMSCommandBtn.clicked.connect(self.add_PPMS_command)
+        self.removeCommandBtn.clicked.connect(self.remove_command)
+        self.editCommandBtn.clicked.connect(self.edit_command)
+        self.startExptBtn.clicked.connect(self.run_expt)
 
         # Check for SDR14 connection
-        """try:
+        try:
             self.device = ADQ_tools_lite.sdr14()
         except IOError:
             self.device = None
-            print('No device connected!')"""
+            print('No device connected!')
 
         # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
@@ -274,30 +257,18 @@ class RunApp(Ui_mainWindow):
     def initialise_plot_widgets(self):
 
         # Assign axes to variables
-        live_NMR_ax = self.liveNMRPlotWidget.canvas.ax
-        live_PPMS_ax_temp = self.livePPMSPlotWidget.canvas.ax
-        live_PPMS_ax_field = self.livePPMSPlotWidget.canvas.ax.twinx()
+        time_plot_ax = self.timePlotWidget.canvas.ax
+        frq_plot_ax = self.frqPlotWidget.canvas.ax
 
-        # Initialise NMR axes
-        live_NMR_ax.set_title('Signal from SDR14')
-        live_NMR_ax.set_xlabel('Sample number')
-        live_NMR_ax.set_ylabel('Signal')
+        # Initialise time plot axes
+        time_plot_ax.set_title('Signal from SDR14')
+        time_plot_ax.set_xlabel('Sample number')
+        time_plot_ax.set_ylabel('Signal')
 
-        # Initialise PPMS Temp axes
-        live_PPMS_ax_temp.set_title('PPMS')
-        live_PPMS_ax_temp.set_xlabel('Time (s)')
-        live_PPMS_ax_temp.set_ylabel('Temperature (K)', color='r')
-        live_PPMS_ax_field.spines['left'].set_color('red')
-        live_PPMS_ax_temp.tick_params(axis='y', colors='red')
-        live_PPMS_ax_temp.set_ylim([0, 300])
-        temp_line = live_PPMS_ax_temp.plot()
-
-
-        # Initialise PPMS Field axes
-        live_PPMS_ax_field.set_ylabel('Magnetic Field (Oe)', color='b')
-        live_PPMS_ax_field.spines['right'].set_color('blue')
-        live_PPMS_ax_field.tick_params(axis='y', colors='blue')
-        live_PPMS_ax_field.set_ylim([0, 70000])
+        # Initialise frq plot axes
+        frq_plot_ax.set_title('Spectrum')
+        frq_plot_ax.set_xlabel('Frequency (Hz)')
+        frq_plot_ax.set_ylabel('Intensity (arb.)')
 
     def clear_txt(self):
         """
@@ -428,7 +399,7 @@ class RunApp(Ui_mainWindow):
         self.sampleNameLineEdit.setText("")
         self.sampleMassLineEdit.setText("")
 
-    def add_spec_command(self):
+    def add_NMR_command(self):
         """
         Allows a .seq file to be selected from a file dialog and added to the experiment tree widget.
         """
@@ -478,7 +449,6 @@ class RunApp(Ui_mainWindow):
             index = self.exptTreeWidget.indexFromItem(baseNode)
             # Delete selected node
             self.exptTreeWidget.takeTopLevelItem(index.row())
-            self.exptTextEdit.clear()
 
     def edit_command(self):
         """
@@ -517,40 +487,6 @@ class RunApp(Ui_mainWindow):
                     # Write to tree
                     node.setText(2, f'{repeats}')
 
-    def display_command(self, selected_item, col):
-        """
-        Displays the parameters in the selected sequence in the text box.
-        """
-
-        if col == 0 or col == 1 or col == 2:
-            # Read name from QTreeWidget
-            name = selected_item.text(1)
-            # Replace try with check for file existing!
-            try:
-                # Construct full filepath
-                seq_path = self.default_seq_filepath + name + '.seq'
-                # Load sequence data
-                seq_data = np.loadtxt(seq_path)
-                # Clear textEdit
-                self.exptTextEdit.clear()
-
-                seq_text = 'Sequence data for ' + name + ' </br><style>table, td{{border: 1px solid black;' \
-                                                            'border-collapse: collapse;text-align:center}}</style><table>' \
-                                                            '<tr><th>Parameter</th><th>Value</th></tr>' \
-                                                            '<tr><td>Frequency (MHz)</td><td>{}</td></tr>' \
-                                                            '<tr><td>Phase</td><td>{}</td></tr>' \
-                                                            '<tr><td>Pulse 1 length (ns)</td><td>{}</td></tr>' \
-                                                            '<tr><td>Pulse 2 length (ns)</td><td>{}</td></tr>' \
-                                                            '<tr><td>Gap length (ns)</td><td>{}</td></tr>' \
-                                                            '<tr><td>Record length (ns)</td><td>{}</td></tr>' \
-                                                            '</table>'.format(seq_data[0]/1e6, seq_data[1],
-                                                                              seq_data[2], seq_data[3],
-                                                                              seq_data[4], seq_data[5])
-
-                self.exptTextEdit.setHtml(seq_text)
-            except:
-                print('Error!')
-
     def run_expt(self):
 
         # Reset command count
@@ -569,7 +505,7 @@ class RunApp(Ui_mainWindow):
         else:
             # Run first command in the list
             self.run_command()
-            self.runExptBtn.setEnabled(False)
+            self.startExptBtn.setDisabled(True)
 
     def run_command(self):
 
@@ -628,58 +564,60 @@ class RunApp(Ui_mainWindow):
 
             # Increment current command counter
             self.current_command += 1
+            if self.device:
+                # Check if command is NMR or PPMS
+                if command_type == 'NMR':
+                    # Get sequence name and repeats
+                    seq_name = item.text(1)
+                    repeats = item.text(2)
 
-            # Check if command is NMR or PPMS
-            if command_type == 'NMR':
-                # Get sequence name and repeats
-                seq_name = item.text(1)
-                repeats = item.text(2)
+                    # Make output data file
+                    self.create_data_file(seq_name, int(repeats))
 
-                # Make output data file
-                self.create_data_file(seq_name, int(repeats))
+                    # Generate output data filepaths
+                    data_filepath = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name
 
-                # Generate output data filepaths
-                data_filepath = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name
+                    # Read sequence from file
+                    sequence_vals = np.loadtxt(self.default_seq_filepath + seq_name + '.seq', dtype=int)
+                    # Delete phase since it is not implemented yet
+                    sequence_vals = np.delete(sequence_vals, 1)
 
-                # Read sequence from file
-                sequence_vals = np.loadtxt(self.default_seq_filepath + seq_name + '.seq', dtype=int)
-                # Delete phase since it is not implemented yet
-                sequence_vals = np.delete(sequence_vals, 1)
+                    # Construct tuples of (Register, value) pairs
+                    register_values = np.empty(sequence_vals.size, dtype=object)
+                    for j, t in enumerate(zip(self.registers, sequence_vals)):
+                        register_values[j] = (t[0], t[1])
 
-                # Construct tuples of (Register, value) pairs
-                register_values = np.empty(sequence_vals.size, dtype=object)
-                for j, t in enumerate(zip(self.registers, sequence_vals)):
-                    register_values[j] = (t[0], t[1])
-
-                run_NMR_sequence(register_values, repeats, data_filepath, seq_name)
-
-            else:
-                # Check if command is temperature or field
-                command = item.text(1)
-                if 'Temperature' in command:
-                    # Extract set value
-                    value_str = command.split('\n')[0]
-                    value = value_str.split(' ')[-1][:-2]
-
-                    # Extract rate
-                    rate_str = command.split('\n')[1]
-                    rate = rate_str.split(' ')[1][:-4]
-
-                    # Run temperature PPMS command
-                    run_PPMS_command('T', value, rate)
+                    run_NMR_sequence(register_values, repeats, data_filepath, seq_name)
 
                 else:
-                    # Extract set value
-                    value_str = command.split('\n')[0]
-                    value = value_str.split(' ')[-1][:-3]
+                    # Check if command is temperature or field
+                    command = item.text(1)
+                    if 'Temperature' in command:
+                        # Extract set value
+                        value_str = command.split('\n')[0]
+                        value = value_str.split(' ')[-1][:-2]
 
-                    # Extract rate
-                    rate_str = command.split('\n')[1]
-                    rate = rate_str.split(' ')[1][:-5]
+                        # Extract rate
+                        rate_str = command.split('\n')[1]
+                        rate = rate_str.split(' ')[1][:-4]
 
-                    # Run field PPMS command
-                    run_PPMS_command('F', value, rate)
+                        # Run temperature PPMS command
+                        run_PPMS_command('T', value, rate)
 
+                    else:
+                        # Extract set value
+                        value_str = command.split('\n')[0]
+                        value = value_str.split(' ')[-1][:-3]
+
+                        # Extract rate
+                        rate_str = command.split('\n')[1]
+                        rate = rate_str.split(' ')[1][:-5]
+
+                        # Run field PPMS command
+                        run_PPMS_command('F', value, rate)
+            else:
+                time.sleep(1)
+                self.run_command()
         else:
             print('Main Thread: Experiment finished!')
             self.reset_expt_tab()
@@ -777,21 +715,21 @@ class RunApp(Ui_mainWindow):
 
         def plot_time_data(x, ch1_data, ch2_data):
 
-            if (self.live_time_plot_ref["Channel A"] is None) and (self.live_time_plot_ref["Channel B"] is None):
+            if (self.time_plot_line["Channel A"] is None) and (self.time_plot_line["Channel B"] is None):
                 # If plots are blank, generate plot references
                 plot_refs = self.liveTimePlotWidget.canvas.ax.plot(x, ch1_data, x, ch2_data)
 
-                self.live_time_plot_ref["Channel A"] = plot_refs[0]
-                self.live_time_plot_ref["Channel A"].set_label('CH A')
+                self.time_plot_line["Channel A"] = plot_refs[0]
+                self.time_plot_line["Channel A"].set_label('CH A')
 
-                self.live_time_plot_ref["Channel B"] = plot_refs[1]
-                self.live_time_plot_ref["Channel B"].set_label('CH B')
+                self.time_plot_line["Channel B"] = plot_refs[1]
+                self.time_plot_line["Channel B"].set_label('CH B')
                 self.liveTimePlotWidget.canvas.ax.legend(loc='upper right')
 
             else:
                 # Update plot references
-                self.live_time_plot_ref["Channel A"].set_ydata(ch1_data)
-                self.live_time_plot_ref["Channel B"].set_ydata(ch2_data)
+                self.time_plot_line["Channel A"].set_ydata(ch1_data)
+                self.time_plot_line["Channel B"].set_ydata(ch2_data)
 
             self.liveTimePlotWidget.canvas.draw()
 
@@ -804,22 +742,22 @@ class RunApp(Ui_mainWindow):
 
             ind = int(N/2)
 
-            if (self.live_frq_plot_ref["Channel A"] is None) and (self.live_frq_plot_ref["Channel B"] is None):
+            if (self.frq_plot_line["Channel A"] is None) and (self.frq_plot_line["Channel B"] is None):
 
                 x = xf[0:ind:10]
                 # If plots are blank, generate plot references
                 plot_refs = self.liveFrqPlotWidget.canvas.ax.plot(x, y1, x, y2)
 
-                self.live_frq_plot_ref["Channel A"] = plot_refs[0]
-                self.live_frq_plot_ref["Channel A"].set_label('CH A')
+                self.frq_plot_line["Channel A"] = plot_refs[0]
+                self.frq_plot_line["Channel A"].set_label('CH A')
 
-                self.live_frq_plot_ref["Channel B"] = plot_refs[1]
-                self.live_frq_plot_ref["Channel B"].set_label('CH B')
+                self.frq_plot_line["Channel B"] = plot_refs[1]
+                self.frq_plot_line["Channel B"].set_label('CH B')
                 self.liveFrqPlotWidget.canvas.ax.legend(loc='upper right')
             else:
                 # Update plot references
-                self.live_frq_plot_ref["Channel A"].set_ydata(y1)
-                self.live_frq_plot_ref["Channel B"].set_ydata(y2)
+                self.frq_plot_line["Channel A"].set_ydata(y1)
+                self.frq_plot_line["Channel B"].set_ydata(y2)
 
             self.liveFrqPlotWidget.canvas.draw()
 
@@ -846,9 +784,9 @@ class RunApp(Ui_mainWindow):
         """
         Resets the 'Experiment' tab layout after an experiment is finished.
         """
-        self.runExptBtn.setEnabled(True)
-        self.currentSeqLbl.setText('Current Sequence: ')
-        self.currentRepeatLbl.setText('Current Repeat: ')
+
+        self.startExptBtn.setDisabled(False)
+        print('Resetting')
 
     def update_expt_labels(self, seq_name, repeat='--'):
         """
