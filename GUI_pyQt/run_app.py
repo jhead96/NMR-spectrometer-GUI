@@ -8,6 +8,7 @@ import scipy
 import time
 import os
 from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PyQt5.QtGui import QBrush, QColor
 
 import ADQ_tools_lite
 
@@ -246,11 +247,12 @@ class RunApp(Ui_MainWindow):
 
         # Initialise command count and command count
         self.current_command = 0
-        self.command_count = 0
+        self.total_commands = 0
 
         # Initialise sample parameters
         self.sample_name = ''
         self.sample_mass = 0.0
+        self.sample_shape = ''
 
         self.num_parameters = 6
 
@@ -330,22 +332,6 @@ class RunApp(Ui_MainWindow):
         # Update saved file text-box
         self.savedSeqLineEdit.setText(save_file_name[0])
 
-    def next_tab(self):
-        """
-        Switches view the next tab in the GUI.
-        """
-        current_index = self.mainTab.currentIndex()
-        next_index = current_index + 1
-        self.mainTab.setCurrentIndex(next_index)
-
-    def prev_tab(self):
-        """
-        Switches view to the previous tab in the GUI
-        """
-        current_index = self.mainTab.currentIndex()
-        prev_index = current_index - 1
-        self.mainTab.setCurrentIndex(prev_index)
-
     def get_sample_info(self):
         """
         Stores the sample information from the 'Sample' tab into the class.
@@ -365,6 +351,7 @@ class RunApp(Ui_MainWindow):
         # Read sample information from text-boxes
         name = self.sampleNameLineEdit.text()
         mass = self.sampleMassLineEdit.text()
+        shape = self.sampleShapeLineEdit.text()
 
         # Check input sample name is valid
         if name == '':
@@ -380,10 +367,12 @@ class RunApp(Ui_MainWindow):
             # Update internal sample variables
             self.sample_name = name
             self.sample_mass = float(mass)
+            self.sample_shape = shape
 
             # Update labels
-            self.currentSampleNameLbl.setText('Current sample name: {}'.format(self.sample_name))
-            self.currentSampleMassLbl.setText('Current sample mass: {} mg'.format(self.sample_mass))
+            self.currentSampleNameLbl.setText(f'Current sample name: {self.sample_name}')
+            self.currentSampleMassLbl.setText(f'Current sample mass: {self.sample_mass} mg')
+            self.currentSampleShapeLbl.setText(f'Current sample shape: {self.sample_shape}')
 
     def clear_sample_info(self):
         """
@@ -392,12 +381,15 @@ class RunApp(Ui_MainWindow):
         # Reset internal sample variables
         self.sample_name = ""
         self.sample_mass = 0.0
+        self.sample_shape = ""
         # Reset labels
         self.currentSampleNameLbl.setText('Current sample name: No sample entered!')
         self.currentSampleMassLbl.setText('Current sample mass: No sample entered!')
+        self.currentSampleShapeLbl.setText('Current sample mass: No sample entered!')
         # Clear textboxes
         self.sampleNameLineEdit.setText("")
         self.sampleMassLineEdit.setText("")
+        self.sampleShapeLineEdit.setText("")
 
     def add_NMR_command(self):
         """
@@ -407,15 +399,17 @@ class RunApp(Ui_MainWindow):
         load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
         # Read file name of sequence
         load_filename = load_filepath[0].split('/')[-1][:-4]
-        # Get number of repeats
-        repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1 )
 
-        # Add data to tree widget [TYPE,  SEQ NAME, REPEATS]
-        if valid and repeats > 0:
-            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['NMR', load_filename, str(repeats)])
-            self.exptTreeWidget.addTopLevelItem(item)
-        else:
-            self.show_dialog('Invalid entry!')
+        if load_filename:
+            # Get number of repeats
+            repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1 )
+
+            # Add data to tree widget [TYPE,  SEQ NAME, REPEATS]
+            if valid and repeats > 0:
+                item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['NMR', load_filename, str(repeats)])
+                self.exptTreeWidget.addTopLevelItem(item)
+            else:
+                self.show_dialog('Invalid entry!')
 
     def add_PPMS_command(self):
 
@@ -496,18 +490,45 @@ class RunApp(Ui_MainWindow):
         self.create_data_directory()
 
         # Check if command list is empty
-        self.command_count = self.exptTreeWidget.topLevelItemCount()
+        self.total_commands = self.exptTreeWidget.topLevelItemCount()
 
         # If TreeWidget is empty show error messagebox
-        if self.command_count == 0:
+        if self.total_commands == 0:
             msg_text = 'No commands selected in \'Experiment\' tab!'
             self.show_dialog(msg_text)
         else:
             # Run first command in the list
             self.run_command()
+            # Disable start button
             self.startExptBtn.setDisabled(True)
 
     def run_command(self):
+
+        def process_PPMS_command(com):
+
+            if 'Temperature' in com:
+                # Extract set value
+                value_str = com.split('\n')[0]
+                value = value_str.split(' ')[-1][:-2]
+
+                # Extract rate
+                rate_str = com.split('\n')[1]
+                rate = rate_str.split(' ')[1][:-4]
+
+                variable_type = 'T'
+
+            else:
+                # Extract set value
+                value_str = command.split('\n')[0]
+                value = value_str.split(' ')[-1][:-3]
+
+                # Extract rate
+                rate_str = command.split('\n')[1]
+                rate = rate_str.split(' ')[1][:-5]
+                # Define temp or field
+                variable_type = 'F'
+
+            return variable, value, rate
 
         def run_NMR_sequence(reg_vals, num_reps, data_filepath, seq_names):
             """
@@ -554,16 +575,31 @@ class RunApp(Ui_MainWindow):
             # Start thread
             self.thread.start()
 
+        def change_item_colour(it, col):
+
+            it.setForeground(0, col)
+            it.setForeground(1, col)
+            it.setForeground(2, col)
+
+
         print(f'Current command: {self.current_command}')
 
-        if self.current_command < self.command_count:
-            # Parse current command
+        # Change previous command to black
+        if self.current_command != 0:
+            prev_item = self.exptTreeWidget.topLevelItem(self.current_command-1)
+            change_item_colour(prev_item, QBrush(QColor('#000000')))
+
+        if self.current_command < self.total_commands:
+
+            # Get current command
             item = self.exptTreeWidget.topLevelItem(self.current_command)
-
+            # Change current command to green
+            change_item_colour(item, QBrush(QColor('#00FF00')))
+            # Get command type
             command_type = item.text(0)
-
             # Increment current command counter
             self.current_command += 1
+
             if self.device:
                 # Check if command is NMR or PPMS
                 if command_type == 'NMR':
@@ -590,34 +626,16 @@ class RunApp(Ui_MainWindow):
                     run_NMR_sequence(register_values, repeats, data_filepath, seq_name)
 
                 else:
-                    # Check if command is temperature or field
+                    # Extract command
                     command = item.text(1)
-                    if 'Temperature' in command:
-                        # Extract set value
-                        value_str = command.split('\n')[0]
-                        value = value_str.split(' ')[-1][:-2]
-
-                        # Extract rate
-                        rate_str = command.split('\n')[1]
-                        rate = rate_str.split(' ')[1][:-4]
-
-                        # Run temperature PPMS command
-                        run_PPMS_command('T', value, rate)
-
-                    else:
-                        # Extract set value
-                        value_str = command.split('\n')[0]
-                        value = value_str.split(' ')[-1][:-3]
-
-                        # Extract rate
-                        rate_str = command.split('\n')[1]
-                        rate = rate_str.split(' ')[1][:-5]
-
-                        # Run field PPMS command
-                        run_PPMS_command('F', value, rate)
+                    # Process PPMS command
+                    variable, value, rate = process_PPMS_command(command)
+                    # Run command
+                    run_PPMS_command(variable, value, rate)
             else:
-                time.sleep(1)
-                self.run_command()
+                # Wait 2 seconds
+                QtCore.QTimer.singleShot(2000, lambda: self.run_command())
+
         else:
             print('Main Thread: Experiment finished!')
             self.reset_expt_tab()
@@ -786,14 +804,13 @@ class RunApp(Ui_MainWindow):
         """
 
         self.startExptBtn.setDisabled(False)
-        print('Resetting')
 
     def update_expt_labels(self, seq_name, repeat='--'):
         """
         Updates the 'Experiment' tab labels during the experiment.
         """
-        self.currentSeqLbl.setText('Current Sequence: {}'.format(seq_name))
-        self.currentRepeatLbl.setText('Current Repeat: {}'.format(repeat))
+        #self.currentSeqLbl.setText('Current Sequence: {seq_name}'.format(seq_name))
+        self.currentRepeatLbl.setText(f'Current Repeat: {repeat}')
 
     def create_data_directory(self):
         """
@@ -832,10 +849,11 @@ class RunApp(Ui_MainWindow):
 
             # Write header
             f.write("[HEADER]\n")
-            f.write("SAMPLE NAME, {}\n".format(self.sample_name))
-            f.write("SAMPLE MASS (mg), {}\n".format(self.sample_mass))
-            f.write("SEQUENCE, {}\n".format(seq_name))
-            f.write("EXPERIMENT NUMBER, {}\n".format(i+1))
+            f.write(f"SAMPLE NAME,{self.sample_name}\n")
+            f.write(f"SAMPLE MASS (mg),{self.sample_mass}\n")
+            f.write(f"SAMPLE SHAPE,{self.sample_shape}\n")
+            f.write(f"SEQUENCE,{seq_name}\n")
+            f.write(f"EXPERIMENT NUMBER,{i+1}\n")
             f.write("[DATA]\n")
             f.close()
 
