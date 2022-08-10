@@ -13,6 +13,7 @@ from PyQt5.QtGui import QBrush, QColor
 import ADQ_tools_lite
 
 
+# noinspection PyUnresolvedReferences
 class SpecMRWorker(QObject):
     """
     Class to handle interfacing with the SDR14 on a Worker thread.
@@ -72,7 +73,7 @@ class SpecMRWorker(QObject):
             print('Device disabled')
             print('')
             print('')
-            time.sleep(5)
+            time.sleep(10)
             # Increment k
             k += 1
 
