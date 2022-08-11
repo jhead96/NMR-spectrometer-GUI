@@ -39,7 +39,7 @@ Vpp_from_spectrum = np.array(Vpp_from_spectrum)
 P = Vpp_to_P(Vpp)
 P_from_spectrum = Vpp_to_P(Vpp_from_spectrum)
 
-plt.figure()
+
 fig1, ax1 = plt.subplots()
 ax1.plot(freqs2, Vpp, "r.-", label="Calculated from $V(t)$")
 ax1.plot(freqs2, Vpp_from_spectrum, "b.-", label="Calculated from PSD")
@@ -48,7 +48,7 @@ ax1.set_xlabel("$f$ (MHz)")
 ax1.set_ylabel("$V_{pp}$ (V)")
 ax1.legend()
 
-plt.figure()
+
 fig2, ax1 = plt.subplots()
 ax1.plot(freqs2, P[1,:], "r.-", label="Calculated from $V(t)$")
 ax1.plot(freqs2, P_from_spectrum[1,:], "b.-", label="Calculated from PSD")

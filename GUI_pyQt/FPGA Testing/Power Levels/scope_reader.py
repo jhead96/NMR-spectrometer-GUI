@@ -73,7 +73,8 @@ class ScopeReader():
         ax2.set_ylabel("Intensity ($V^2$)")
         # If FFT range includes Fs, plot Fs
         if np.max(self.xf) > 1.6e9:
-            ax2.vlines(1.6e9, 0, np.max(self.intensity) / 2, linestyles="dashed")
+            ax2.vlines(1.6e9, 0, np.max(self.intensity) / 2, linestyles="dashed", label="FPGA sampling frequency")
             ax2.set_xlim(0, 2.5e9)
+            ax2.legend(loc="upper center")
 
 
