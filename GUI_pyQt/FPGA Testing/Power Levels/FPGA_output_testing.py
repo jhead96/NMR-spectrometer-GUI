@@ -13,8 +13,8 @@ def Vpp_to_P(Vpp):
 
 R = 50
 
-freqs = ["0pt5", 1, 10, 100, 200, 300, 400]
-freqs2 = [0.5, 1, 10, 100, 200, 300, 400]
+freqs = ["0pt5", 1, 10, 100, 200, 300, 400, 500, 600, 700, 800]
+freqs2 = [0.5, 1, 10, 100, 200, 300, 400, 500, 600, 700, 800]
 
 filenames = ["FPGA_output_" + str(i) + "MHz.csv" for i in freqs]
 data = []
