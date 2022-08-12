@@ -11,7 +11,7 @@ class ScopeReader():
         self.t = self.generate_t()
         self.xf, self.yf, self.intensity = self.calc_FFT()
         self.amp = self.calc_amp()
-        self.power = self.calc_power()
+        self.PSD, self.power = self.calc_power()
 
     def read_data(self):
         data = np.genfromtxt(self.filepath, delimiter=",")
@@ -51,13 +51,9 @@ class ScopeReader():
         PSD = self.intensity / (2*self.fs)
         power = np.trapz(PSD, self.xf) / R
 
-        return power
+        return PSD, power
 
-
-
-
-
-    def plot_data(self):
+    def plot_intensity(self):
 
         fig, (ax1, ax2) = plt.subplots(1, 2)
         fig.suptitle(f"{self.filepath}")
@@ -74,6 +70,26 @@ class ScopeReader():
         # If FFT range includes Fs, plot Fs
         if np.max(self.xf) > 1.6e9:
             ax2.vlines(1.6e9, 0, np.max(self.intensity) / 2, linestyles="dashed", label="FPGA sampling frequency")
+            ax2.set_xlim(0, 2.5e9)
+            ax2.legend(loc="upper center")
+
+    def plot_PSD(self):
+
+        fig, (ax1, ax2) = plt.subplots(1, 2)
+        fig.suptitle(f"{self.filepath}")
+        ax1.plot(self.t, self.y)
+        ax1.set_title(f"$V(t)$, $V_{{pp}} \\approx$ {self.amp}V")
+        ax1.set_xlabel("t (s)")
+        ax1.set_ylabel("V (V)")
+
+        ax2.plot(self.xf, self.PSD)
+
+        ax2.set_title("PSD (calculated from FFT)")
+        ax2.set_xlabel("f (Hz)")
+        ax2.set_ylabel("$P(f)$ ($V^2/Hz$)")
+        # If FFT range includes Fs, plot Fs
+        if np.max(self.xf) > 1.6e9:
+            ax2.vlines(1.6e9, 0, np.max(self.PSD) / 2, linestyles="dashed", label="FPGA sampling frequency")
             ax2.set_xlim(0, 2.5e9)
             ax2.legend(loc="upper center")
 
