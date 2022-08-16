@@ -842,7 +842,7 @@ class Ui_MainWindow(object):
         self.mainTabWidget.setTabText(self.mainTabWidget.indexOf(self.tab_sample), _translate("MainWindow", "Sample"))
         self.sequenceTitleLbl.setText(_translate("MainWindow", "Sequence"))
         self.createSeqLbl.setText(_translate("MainWindow", "Create"))
-        self.frequencyLbl.setText(_translate("MainWindow", "Frequency (MHz)"))
+        self.frequencyLbl.setText(_translate("MainWindow", "Frequency (Hz)"))
         self.gapLenLbl.setText(_translate("MainWindow", "Gap length (ns)"))
         self.phaseLbl.setText(_translate("MainWindow", "Phase"))
         self.pulse1LenLbl.setText(_translate("MainWindow", "Pulse 1 length (ns)"))
