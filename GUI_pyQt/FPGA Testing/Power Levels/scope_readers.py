@@ -93,7 +93,6 @@ class TektronixReader():
             ax2.set_xlim(0, 2.5e9)
             ax2.legend(loc="upper center")
 
-
 class GwInstekReader():
 
     def __init__(self, filepath):
