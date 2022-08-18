@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.fft
 
-class ScopeReader():
+class TektronixReader():
 
     def __init__(self, filepath):
 
@@ -93,4 +93,39 @@ class ScopeReader():
             ax2.set_xlim(0, 2.5e9)
             ax2.legend(loc="upper center")
 
+
+class GwInstekReader():
+
+    def __init__(self, filepath):
+
+        self.filepath = filepath
+        # Read data
+        self.data = self.read_data()
+
+        # Extract useful params
+        self.N = self.data[0, 1]
+        self.Ts = self.data[11, 1]
+        # V/div -> V/pt
+        self.y_scale = self.data[5, 1] / 25
+
+        # Scale y
+        self.y = self.data[16:, 0] * self.y_scale
+        # Generate t
+        self.t = np.arange(0, self.N) * self.Ts
+
+
+    def read_data(self):
+
+        data = np.genfromtxt(self.filepath, delimiter=",", usecols=(0, 1))
+
+        return data
+
+    def plot_data(self):
+
+        fig1, ax1 = plt.subplots()
+
+        ax1.plot(self.t * 1e6, self.y)
+        ax1.set_title(self.filepath.split("/")[-1])
+        ax1.set_xlabel("t ($\mu$s)")
+        ax1.set_ylabel("V (V)")
 

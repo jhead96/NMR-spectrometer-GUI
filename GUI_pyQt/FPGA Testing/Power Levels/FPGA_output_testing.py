@@ -1,4 +1,4 @@
-from scope_reader import ScopeReader
+from scope_readers import TektronixReader
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal
@@ -6,7 +6,7 @@ import scipy.signal
 def Vpp_to_P(Vpp):
 
     R = 50
-    Vrms = Vpp / np.sqrt(2)
+    Vrms = Vpp / (2*np.sqrt(2))
     P_W = (Vrms ** 2) / R
     P_dBm = 10 * np.log10(P_W * 1e3)
 
@@ -17,11 +17,11 @@ R = 50
 freqs = ["0pt5", 1, 10, 100, 200, 300, 400, 500, 600, 700, 800]
 freqs2 = [0.5, 1, 10, 100, 200, 300, 400, 500, 600, 700, 800]
 
-filenames = ["FPGA_output_" + str(i) + "MHz.csv" for i in freqs]
+filenames = [r"FPGA_output_test_data/FPGA_output_" + str(i) + "MHz.csv" for i in freqs]
 data = []
 
 for f in filenames:
-    data.append(ScopeReader(f))
+    data.append(TektronixReader(f))
 
 Vpp = []
 Vpp_from_spectrum = []
@@ -107,6 +107,8 @@ fig3_ax1.set_ylabel("$f_{peaks}$ (MHZ)")
 fig3_ax1.set_title("Frequency components for a generated FPGA signal, $f_{out}$")
 fig3_ax1.set_ylim(0, 2.5e3)
 fig3_ax1.legend()
+
+
 
 
 
