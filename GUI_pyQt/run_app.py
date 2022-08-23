@@ -66,7 +66,7 @@ class SpecMRWorker(QObject):
             print(f'Experiment number: {k+1}')
             print(f'Data file path: {data_filepath}')
 
-            #time.sleep(2)
+            time.sleep(2)
 
             # Disable device
             self.device.disable_dev()
