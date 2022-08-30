@@ -17,7 +17,7 @@ R = 50
 freqs = ["0pt5", 1, 10, 100, 200, 300, 400, 500, 600, 700, 800]
 freqs2 = [0.5, 1, 10, 100, 200, 300, 400, 500, 600, 700, 800]
 
-filenames = [r"FPGA_output_test_data/FPGA_output_" + str(i) + "MHz.csv" for i in freqs]
+filenames = [r"FPGA_output_test_data/no_LPF/FPGA_output_" + str(i) + "MHz.csv" for i in freqs]
 data = []
 
 for f in filenames:

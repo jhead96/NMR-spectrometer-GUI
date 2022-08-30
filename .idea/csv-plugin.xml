@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CsvFileAttributes">
+    <option name="attributeMap">
+      <map>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\1000us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\100us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\10us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\150us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\200us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\20us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\250us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\30us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\40us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\500us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\50us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\single_pulse_testing_data\750us_single_pulse.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
