@@ -5,7 +5,16 @@ import numpy as np
 # FPGA version v0.5.2
 # Data generated using 'single_pulse_testing' function within 'pulse_testing.py'
 pulses = np.array([10, 20, 30, 40, 50, 100, 150, 200, 250, 500, 750, 1000])
-filenames = [f"pulse_test_data/single_pulse_test_data/{i}us_single_pulse.CSV" for i in pulses]
+filenames = [f"pulse_test_data/double_pulse_test_data_v052/{i}us_single_pulse.CSV" for i in pulses]
+
+for f in filenames:
+    dataset = GwInstekReader(f)
+    dataset.plot_data()
+
+# Data generated using 'double_pulse_testing' function within 'pulse_testing.py'
+filenames = np.array([f"pulse_test_data/double_pulse_test_data_v052/20_10_20_double_pulse.CSV",
+                      f"pulse_test_data/double_pulse_test_data_v052/200_100_200_double_pulse.CSV",
+                      f"pulse_test_data/double_pulse_test_data_v052/2000_1000_2000_double_pulse.CSV"])
 
 for f in filenames:
     dataset = GwInstekReader(f)
