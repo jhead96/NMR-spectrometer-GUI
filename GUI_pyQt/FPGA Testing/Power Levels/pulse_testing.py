@@ -84,7 +84,14 @@ def repeat_testing():
     """
     Function for testing if the pulse sequence is repeating itself correctly.
     """
-    for i in range(3):
+
+    # Write pulses
+    device.reg_write(2, 20000)
+    device.reg_write(3, 10000)
+    device.reg_write(4, 20000)
+
+
+    for i in range(5):
         device.enable_dev()
         time.sleep(10)
         device.disable_dev()
@@ -100,8 +107,8 @@ except Exception as ex:
     sys.exit()
 
 
-single_pulse_testing()
-double_pulse_testing()
+#single_pulse_testing()
+#double_pulse_testing()
 repeat_testing()
 
 
