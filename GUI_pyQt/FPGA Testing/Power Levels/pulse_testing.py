@@ -41,7 +41,7 @@ def double_pulse_testing():
 
     P1_reg = 2
     P2_reg = 3
-    G1_reg = 4
+    G1_reg = 5
 
     # Test two pulses
     P1 = np.array([20, 200, 2000]) * 1000
@@ -78,7 +78,50 @@ def three_pulse_testing():
     Function for generating a three pulse sequence test dataset.
     :return:
     """
-    pass
+    P1_reg = 2
+    P2_reg = 3
+    P3_reg = 4
+    G1_reg = 5
+    G2_reg = 6
+
+    # Test two pulses
+    P1 = np.array([20, 200, 2000]) * 1000
+    P2 = np.array([20, 200, 1000]) * 1000
+    P3 = np.array([20, 200, 2000]) * 1000
+    G1 = np.array([10, 100, 2000]) * 1000
+    G2 = np.array([10, 200, 2000]) * 1000
+
+    for p1, p2, p3, g1, g2 in zip(P1, P2, P3, G1, G2):
+
+        # Write
+        if not device.reg_write(P1_reg, p1):
+            print("Write unsuccessful, exiting ...")
+            break
+        if not device.reg_write(P2_reg, p2):
+            print("Write unsuccessful, exiting ...")
+            break
+        if not device.reg_write(P3_reg, p3):
+            print("Write unsuccessful, exiting ...")
+            break
+        if not device.reg_write(G1_reg, g1):
+            print("Write unsuccessful, exiting ...")
+            break
+        if not device.reg_write(G2_reg, g2):
+            print("Write unsuccessful, exiting ...")
+            break
+
+
+        time.sleep(0.5)
+        # Enable/disable
+        device.enable_dev()
+        print("Device enabled!")
+        time.sleep(15)
+        device.disable_dev()
+        print("Device disabled!")
+        time.sleep(0.5)
+        print("--------")
+
+    input("Three pulse testing completed! Press any key to continue ...")
 
 def repeat_testing():
     """
@@ -109,7 +152,8 @@ except Exception as ex:
 
 #single_pulse_testing()
 #double_pulse_testing()
-repeat_testing()
+three_pulse_testing()
+#repeat_testing()
 
 
 

@@ -21,7 +21,7 @@ def test_signal_out():
         # Enable/disable
         device.enable_dev()
         print("Device enabled!")
-        time.sleep(10)
+        time.sleep(15)
         device.disable_dev()
         print("Device disabled!")
         time.sleep(0.5)

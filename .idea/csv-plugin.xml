@@ -3,13 +3,6 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
-        <entry key="\GUI_pyQt\FPGA Testing\Power Levels\HP_8720D_network_analyzer_data\VLF800_frqrsp.CSV">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
         <entry key="\GUI_pyQt\FPGA Testing\Power Levels\HP_8720D_network_analyzer_data\VLF800_frqrsp_-4dBm.CSV">
           <value>
             <Attribute>
