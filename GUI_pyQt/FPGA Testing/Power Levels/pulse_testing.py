@@ -141,6 +141,49 @@ def repeat_testing():
         time.sleep(5)
     print("Finished!")
 
+def gated_RF_pulse_testing():
+
+    # frq reg
+    frq_reg = 1
+
+    # frq
+    frq = 10 * 1000000
+
+    # Pulse regs
+    P1_reg = 2
+    P2_reg = 3
+    P3_reg = 4
+    G1_reg = 5
+    G2_reg = 6
+
+    # Pulse lengths
+    P1 = 20 * 1000
+    P2 = 20 * 1000
+    P3 = 20 * 1000
+    G1 = 10 * 1000
+    G2 = 10 * 1000
+
+
+    # Write regs
+    device.reg_write(frq_reg, frq)
+    device.reg_write(P1_reg, P1)
+    device.reg_write(P2_reg, P2)
+    device.reg_write(P3_reg, P3)
+    device.reg_write(G1_reg, G1)
+    device.reg_write(G2_reg, G2)
+    print("written")
+    time.sleep(5)
+    print("waiting")
+    time.sleep(5)
+    # Enable
+    device.enable_dev()
+    time.sleep(5)
+    device.disable_dev()
+    time.sleep(5)
+    device.enable_dev()
+    time.sleep(5)
+    device.disable_dev()
+
 
 # Connect to SDR-14
 try:
@@ -152,8 +195,9 @@ except Exception as ex:
 
 #single_pulse_testing()
 #double_pulse_testing()
-three_pulse_testing()
+#three_pulse_testing()
 #repeat_testing()
+gated_RF_pulse_testing()
 
 
 
