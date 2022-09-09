@@ -53,6 +53,15 @@ class TektronixReader():
 
         return PSD, power
 
+    def plot_data(self):
+
+        fig, ax1 = plt.subplots()
+
+        ax1.plot(self.t, self.y)
+        ax1.set_title(self.filepath)
+        ax1.set_xlabel("t (s)")
+        ax1.set_ylabel("V (V)")
+
     def plot_intensity(self):
 
         fig, (ax1, ax2) = plt.subplots(1, 2)
