@@ -57,9 +57,9 @@ class TektronixReader():
 
         fig, ax1 = plt.subplots()
 
-        ax1.plot(self.t, self.y)
-        ax1.set_title(self.filepath)
-        ax1.set_xlabel("t (s)")
+        ax1.plot(self.t*1e6, self.y)
+        ax1.set_title(self.filepath.split("/")[-1])
+        ax1.set_xlabel("t ($\mu$s)")
         ax1.set_ylabel("V (V)")
 
     def plot_intensity(self):

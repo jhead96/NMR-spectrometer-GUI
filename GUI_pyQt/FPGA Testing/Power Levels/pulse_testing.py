@@ -141,13 +141,13 @@ def repeat_testing():
         time.sleep(5)
     print("Finished!")
 
-def gated_RF_pulse_testing():
+def gated_RF_pulse_testing(f):
 
     # frq reg
     frq_reg = 1
 
     # frq
-    frq = 10 * 1000000
+    frq = f * 1000000
 
     # Pulse regs
     P1_reg = 2
@@ -168,9 +168,9 @@ def gated_RF_pulse_testing():
     device.reg_write(frq_reg, frq)
     device.reg_write(P1_reg, P1)
     device.reg_write(P2_reg, P2)
-    device.reg_write(P3_reg, P3)
+    #device.reg_write(P3_reg, P3)
     device.reg_write(G1_reg, G1)
-    device.reg_write(G2_reg, G2)
+    #device.reg_write(G2_reg, G2)
     print("written")
     time.sleep(5)
     print("waiting")
@@ -197,7 +197,7 @@ except Exception as ex:
 #double_pulse_testing()
 #three_pulse_testing()
 #repeat_testing()
-gated_RF_pulse_testing()
+gated_RF_pulse_testing(213)
 
 
 
