@@ -43,8 +43,28 @@ def L_coil(r, N, l):
     return L
 
 
+"""
+Matching capacitor equation:
+    Z - Impedence to match (Ohm)
+    f - Frequency (Hz)
+"""
+def matching_cap_simple(Z, f):
+    return 1/(2*np.pi*f*Z)
+
+
+def RLC_impedance(R, L, C, f):
+    omega = 2*np.pi*f
+    Xc = 1/(omega * C)
+    Xl = omega*L
+
+    diff = (1/Xc) - (1/Xl)
+
+    Z = 1/np.sqrt((1/R)**2 + (diff**2))
+
+    return Z
+
 Cmin = 1e-12
-Cmax = 50e-12
+Cmax = 120e-12
 f0 = 213e6
 
 Lmin = L_circuit(f0, Cmax)
@@ -52,12 +72,14 @@ Lmax = L_circuit(f0, Cmin)
 
 print('Required L range: {:.3} H to {:.3} H'.format(Lmin, Lmax))
 
-r = 7e-3
-length = 13e-3
+r = 2.5e-3
+length = 10e-3
 
 Nmin = N_coil(Lmin, r, length)
 Nmax = N_coil(Lmax, r, length)
 
 print('Required N range: {:.3} turns to {:.3} turns'.format(Nmin, Nmax))
 
+C_matching = matching_cap_simple(49.5, f0)
+print(f"Matching capacitance for f = {f0/1e6} MHz, C = {C_matching/1e-12} pF")
 
