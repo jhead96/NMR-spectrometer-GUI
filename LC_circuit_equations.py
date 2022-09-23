@@ -63,14 +63,33 @@ def RLC_impedance(R, L, C, f):
 
     return Z
 
+# Capacitances [F]
 Cmin = 1e-12
 Cmax = 120e-12
+C_coax = 85e-12
+
+C_tune_min = Cmin + C_coax
+C_tune_max = Cmax + C_coax
+
+print("----- CAPACITANCE -----")
+print(f"Tuning capacitor minimum = {Cmin/1e-12}pF")
+print(f"Tuning capacitor maximum = {Cmax/1e-12}pF")
+print(f"Coax. capacitance = {C_coax/1e-12}pF")
+print(f"Tuning capacitor range = {C_tune_min/1e-12}pF - {C_tune_max/1e-12:.2f}pF")
+print()
+
+# Resonant frequency [Hz]
 f0 = 213e6
 
-Lmin = L_circuit(f0, Cmax)
-Lmax = L_circuit(f0, Cmin)
+# Inductance [H]
+Lmin = L_circuit(f0, C_tune_max)
+Lmax = L_circuit(f0, C_tune_min)
 
-print('Required L range: {:.3} H to {:.3} H'.format(Lmin, Lmax))
+print("----- INDUCTANCE -----")
+print(f"Resonant frequency = {f0/1e6}MHz")
+print(f"Minimum L = {Lmin/1e-6:.4f}uH")
+print(f"Maximum L = {Lmax/1e-6:.4f}uH")
+print()
 
 r = 2.5e-3
 length = 10e-3
