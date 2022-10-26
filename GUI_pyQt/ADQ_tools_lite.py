@@ -2,7 +2,13 @@ import ctypes as ct
 import os, time
 import numpy as np
 import matplotlib.pyplot as plt
+from enum import Enum
 
+class TrigMode(Enum):
+    SOFTWARE = 1
+    EXTERNAL = 2
+    LEVEL = 3
+    INTERNAL = 4
 
 class sdr14:
     """
@@ -53,6 +59,8 @@ class sdr14:
             self.delete_cu()
             raise OSError("No devices detected")
         self.device_number = 1  # Device to use (only 1 device)
+        self.cu = self.__cu
+        self.api = self.__api
         self.device_type = self.__api.ADQ_GetADQType(self.__cu, self.device_number)
         if self.device_type != 14:
             self.delete_cu()
@@ -349,11 +357,13 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         Returns
         -------
             int: value - Value stored in register
-        """
+
         conf = self.reg_write(register, data, mask=0xFFFFFFFF, quiet=True)
         if not quiet:
             print("reg{} read: {}".format(register, self.reg_cache[register]))
         return self.reg_cache[register]
+        """
+        pass
 
     def reg_refresh(self, quiet=None):
         """
@@ -423,9 +433,6 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
             print('Invalid sensor number')
             sensor_name = ''
             return temp, sensor_name
-
-
-
 
     class stream_config_struct:
         """
@@ -504,12 +511,12 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         if clk_set:
             print('Clock source set to 0 (internal clock)')
 
-    def set_trigger_mode(self):
-        # Set trigger to software trigger
-        trigger = 1
+    def set_trigger_mode(self, trig_type: TrigMode):
+        # Get trigger type
+        trigger = TrigMode[trig_type].value
         trig_set = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, trigger)
         if trig_set:
-            print('Trigger set to software trigger')
+            print(f"Trigger set to {trig_type}")
         else:
             print('Failed to set trigger')
 
@@ -527,18 +534,18 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
     def arm_MR_trigger(self):
         # Deactivate trigger
         self.__api.ADQ_DisarmTrigger(self.__cu, self.device_number)
+        # Activate trigger
         trig_armed = self.__api.ADQ_ArmTrigger(self.__cu, self.device_number)
         if trig_armed:
             print('Trigger armed')
 
 
-
-    def MR_acquisition(self):
+    def MR_acquisition(self, trig_mode):
 
         # Initialise streaming parameters
         self.set_clock_source()
 
-        self.set_trigger_mode()
+        self.set_trigger_mode(trig_mode)
         self.set_MR_settings()
 
         # Arm trigger

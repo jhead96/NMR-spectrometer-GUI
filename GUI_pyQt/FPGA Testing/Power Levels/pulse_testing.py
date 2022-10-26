@@ -184,6 +184,29 @@ def gated_RF_pulse_testing(f):
     time.sleep(5)
     device.disable_dev()
 
+def ADC_enable_testing():
+
+    # Define regs
+    P1_reg = 2
+    P2_reg = 3
+    G1_reg = 5
+    rec_reg = 7
+
+    # Set up two pulse sequence
+    P1 = 20 * 1000
+    P2 = 10 * 1000
+    G1 = 20 * 1000
+    rec = 20 * 1000
+
+    device.reg_write(P1_reg, P1)
+    device.reg_write(P2_reg, P2)
+    device.reg_write(G1_reg, G1)
+    device.reg_write(rec_reg, rec)
+
+    # Enable dev
+    device.enable_dev()
+    time.sleep(15)
+    device.disable_dev()
 
 # Connect to SDR-14
 try:
@@ -197,7 +220,8 @@ except Exception as ex:
 #double_pulse_testing()
 #three_pulse_testing()
 #repeat_testing()
-gated_RF_pulse_testing(213)
+#gated_RF_pulse_testing(213)
+ADC_enable_testing()
 
 
 

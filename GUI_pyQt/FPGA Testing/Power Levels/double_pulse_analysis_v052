@@ -18,7 +18,7 @@ filenames = np.array([f"pulse_test_data/double_pulse_test_data_v052/20_10_20_dou
 
 for f in filenames:
     dataset = GwInstekReader(f)
-    #dataset.plot_data()
+    dataset.plot_data()
 
 # Data generated using 'repeat_testing' function within 'pulse_testing.py'
 filepath = r"pulse_test_data/double_pulse_test_data_v052/20_10_20_repeat_testing.csv"
@@ -32,7 +32,7 @@ y = data[:, 4]
 
 # Generate t
 t = np.arange(0, N*Ts, Ts)
-
+plt.figure()
 lbls = np.array(["Record 1, t = 0s", "Record 2, t = 15s", "Record 3, t = 30s"])
 # Split y
 for y_data, l in zip(np.split(y, num_frames), lbls):
