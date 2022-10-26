@@ -511,7 +511,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         if clk_set:
             print('Clock source set to 0 (internal clock)')
 
-    def set_trigger_mode(self, trig_type: TrigMode):
+    def set_trigger_mode(self, trig_type: str):
         # Get trigger type
         trigger = TrigMode[trig_type].value
         trig_set = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, trigger)
@@ -519,6 +519,24 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
             print(f"Trigger set to {trig_type}")
         else:
             print('Failed to set trigger')
+
+    def set_pretrigger(self, samples: int):
+
+        valid = self.__api.ADQ_SetPreTrigSamples(self.__cu, self.device_number, samples)
+
+        if valid:
+            print(f"Pretrigger = {samples} samples")
+        else:
+            print('Failed to set pretrigger')
+
+    def set_trig_delay(self, samples: int):
+
+        valid = self.__api.ADQ_SetTriggerDelay(self.__cu, self.device_number, samples)
+
+        if valid:
+            print(f"Trigger delay = {samples} samples")
+        else:
+            print('Failed to set trigger delay')
 
     def set_MR_settings(self):
         # Setup SDR-14 for MultiRecord acquisition

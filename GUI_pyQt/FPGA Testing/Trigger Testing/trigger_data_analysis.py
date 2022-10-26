@@ -51,8 +51,8 @@ print(f"Scope triggered at {scope_trigger} us")
 print(f"Function generator output detected at {fg_start} us")
 print(f"Delay = {lag} us")
 
-plt.plot((t/1e-6) - lag, sf*ch1 + offset, label="Ch 1 - FPGA")
-plt.plot((t/1e-6) - lag, sf*ch2 + offset, label="Ch 2 - FPGA")
+plt.plot((t/1e-6) - lag, sf*ch1 + offset, label="Ch 1 - FPGA (Adjusted by delay)")
+plt.plot((t/1e-6) - lag, sf*ch2 + offset, label="Ch 2 - FPGA (Adjusted by delay)")
 plt.xlim(0, 12)
 
 plt.legend()
