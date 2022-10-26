@@ -104,7 +104,7 @@ class TektronixReader():
 
 class GwInstekReader():
 
-    def __init__(self, filepath):
+    def __init__(self, filepath: str):
 
         self.filepath = filepath
         # Read data

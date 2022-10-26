@@ -10,6 +10,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\GUI_pyQt\FPGA Testing\Trigger Testing\A0014CH1.CSV">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>
