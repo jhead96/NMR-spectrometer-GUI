@@ -115,7 +115,7 @@ class sdr14:
                 print("Argument must be boolean (True/False)")
             return 0
 
-    def read_global_quiet(self, quiet=None):
+    def read_global_quiet(self, quiet: bool = None) -> bool:
         """
         Read the current global quiet setting (see set_global_quiet)
 
@@ -128,7 +128,7 @@ class sdr14:
             print("Current global quiet setting: {}".format(self.__quiet))
         return self.__quiet
 
-    def __qtest(self, quiet):
+    def __qtest(self, quiet: bool) -> bool:
         """
         Quiet test, allows argument to override global quiet
 
@@ -142,7 +142,7 @@ class sdr14:
         """
         return ((quiet == None and self.__quiet) or quiet)
 
-    def __failed(self, task, quiet):
+    def __failed(self, task: str, quiet: bool) -> bool:
         """
         Convenience function to return a fail message
 
@@ -158,7 +158,7 @@ class sdr14:
             print("{} FAILED".format(task))
         return 0
 
-    def __load_api(self, lib_dir=None, quiet=None):
+    def __load_api(self, lib_dir: str = None, quiet: bool = None):
         """
         Load ADQ library and configure response types
 
@@ -193,7 +193,7 @@ class sdr14:
             raise Exception("The ADQAPI driver file could \
                             not be found... Exiting")
 
-    def __default_type_config(self, quiet=None):
+    def __default_type_config(self, quiet: bool =None):
         """
         Set API default input/output data types
         """
@@ -228,7 +228,7 @@ api.ADQ_GetBoardSerialNumber.restype = ct.c_char_p
 api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
 """)
 
-    def connected_adq(self, quiet=None):
+    def connected_adq(self, quiet: bool = None) -> int:
         """
         Poll the number of currently connected devices
 
@@ -248,7 +248,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                                        number_of_other))
         return number_of_devices
 
-    def __create_cu(self, quiet=None):
+    def __create_cu(self, quiet: bool = None) -> ct.c_void_p:
         """
         Create control unit and find/assign connected devices to it.
         Private such that cu is not created without first deleting the
@@ -266,7 +266,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         self.__api.ADQControlUnit_FindDevices(cu)
         return cu
 
-    def delete_cu(self, quiet=None):
+    def delete_cu(self, quiet: bool = None) -> int:
         """
         Delete existing control unit
 
@@ -287,7 +287,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                 print("No Control Units to remove")
             return 0
 
-    def reload_cu(self, quiet=None):
+    def reload_cu(self, quiet: bool = None):
         """
         Delete and re-create control unit
         """
@@ -295,7 +295,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         self.delete_cu(quiet)
         self.__cu = self.__create_cu(quiet)
 
-    def reg_write(self, register, data, mask=0, quiet=None):
+    def reg_write(self, register: int, data: int, mask: int = 0, quiet: bool = None) -> int:
         """
         Write a value to a specified user register
 
@@ -346,7 +346,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         """
         self.reg_write(0, 0)
 
-    def reg_read(self, register, quiet=None):
+    def reg_read(self, register: int, quiet: bool = None) -> int:
         """
         Read value from a specified user register. Also updates local cache
 
@@ -365,7 +365,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         """
         pass
 
-    def reg_refresh(self, quiet=None):
+    def reg_refresh(self, quiet:bool = None):
         """
         Pull all user register values from device
         """
@@ -377,7 +377,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
             for i in range(16):
                 print("reg{} read: {}".format(i, self.reg_cache[i]))
 
-    def reg_reset(self, quiet=None):
+    def reg_reset(self, quiet:bool = None) -> int:
         """
         Default (initial) user_regiser values
 
@@ -414,7 +414,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                 print("Loaded default register values\n")
             return 1
 
-    def read_temp(self, sensor_num):
+    def read_temp(self, sensor_num: int) -> (float, str):
         temp = 0
         sensor_type = np.array(['Local: ', 'ADC 0: ', 'ADC 1: ', 'FPGA: ', 'PCB diode: ', 'Error!'])
         try:
@@ -468,9 +468,9 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                    self.sample_skip, self.bytes_per_sample, \
                    self.clock_source, self.total_nof_buffers
 
-        def set_config(self, total_records=None,
-                       records_per_transfer=None,
-                       samples_per_record=None):
+        def set_config(self, total_records: int = None,
+                       records_per_transfer: int = None,
+                       samples_per_record: int = None) -> (bool, int):
             """
             Set configuration for data streaming
 
@@ -513,10 +513,10 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
 
     def set_trigger_mode(self, trig_type: str):
         # Get trigger type
-        trigger = TrigMode[trig_type].value
-        trig_set = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, trigger)
+        #trigger = TrigMode[trig_type].value
+        trig_set = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, 2)
         if trig_set:
-            print(f"Trigger set to {trig_type}")
+            print(f"Trigger set to EXTERNAL")
         else:
             print('Failed to set trigger')
 
@@ -549,6 +549,14 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
                   'Number of records: {}\n'
                   'Samples per record: {}'.format(num_records, samples_per_record))
 
+    def set_external_trig_edge(self):
+        valid = self.__api.ADQ_SetExternTrigEdge(self.__cu, self.device_number, 1)
+
+        if valid:
+            print(f"External trigger edge set to RISING")
+        else:
+            print('Failed to set external trigger edge')
+
     def arm_MR_trigger(self):
         # Deactivate trigger
         self.__api.ADQ_DisarmTrigger(self.__cu, self.device_number)
@@ -557,13 +565,14 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         if trig_armed:
             print('Trigger armed')
 
-
-    def MR_acquisition(self, trig_mode):
+    def MR_acquisition(self, trig_mode: str) -> (np.array, np.array):
 
         # Initialise streaming parameters
         self.set_clock_source()
-
+        # Trigger settings
         self.set_trigger_mode(trig_mode)
+        self.set_external_trig_edge()
+        # Acquisition settings
         self.set_MR_settings()
 
         # Arm trigger
@@ -604,6 +613,60 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         self.__api.ADQ_MultiRecordClose(self.__cu, self.device_number)
 
         return ch1_data, ch2_data
+
+    def External_MR_acquisition(self, trig_mode: str) -> (np.array, np.array):
+
+        # Initialise streaming parameters
+        self.set_clock_source()
+        # Trigger settings
+        self.set_trigger_mode(trig_mode)
+        self.set_external_trig_edge()
+        # Acquisition settings
+        self.set_MR_settings()
+
+        # Arm trigger
+        self.arm_MR_trigger()
+        time.sleep(1)
+        # Acquire data
+        self.enable_dev()
+        time.sleep(1)
+        self.disable_dev()
+
+        """while self.__api.ADQ_GetAcquiredAll(self.__cu, self.device_number) == 0:
+            trig_on = self.__api.ADQ_SWTrig(self.__cu, self.device_number)
+            if trig_on:
+                print('Trigger activated')"""
+        print('Data acquisition successful')
+
+        # Set up buffers for data
+        max_channels = 2
+        target_buffers = (ct.POINTER(
+            ct.c_int16 * self.stream_cfg_data.samples_per_record * self.stream_cfg_data.num_of_records) * max_channels)()
+
+        for buf_pntr in target_buffers:
+            buf_pntr.contents = (
+                        ct.c_int16 * self.stream_cfg_data.samples_per_record * self.stream_cfg_data.num_of_records)()
+
+        # Get data from ADQ
+        ADQ_TRANSFER_MODE = 0  # Default mode
+        ADQ_CHANNELS_MASK = 0x3  # Read from both channels
+
+        status = self.__api.ADQ_GetData(self.__cu, self.device_number, target_buffers,
+                                        self.stream_cfg_data.samples_per_record * self.stream_cfg_data.num_of_records,
+                                        2, 0, self.stream_cfg_data.num_of_records, ADQ_CHANNELS_MASK,
+                                        0, self.stream_cfg_data.samples_per_record, ADQ_TRANSFER_MODE)
+        if status:
+            print('Data retrieved successfully')
+
+        ch1_data = np.frombuffer(target_buffers[0].contents[0], dtype=np.int16)
+        ch2_data = np.frombuffer(target_buffers[1].contents[0], dtype=np.int16)
+
+        # Disarm trigger and close MR mode
+        self.__api.ADQ_DisarmTrigger(self.__cu, self.device_number)
+        self.__api.ADQ_MultiRecordClose(self.__cu, self.device_number)
+
+        return ch1_data, ch2_data
+
 
     def get_data_setup(self, write_to_file=None, total_records=None, records_per_transfer=None, samples_per_record=None,
                        quiet=None):

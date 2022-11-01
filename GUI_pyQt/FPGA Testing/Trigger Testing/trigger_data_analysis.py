@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 # Read scope data
 filepaths = np.array([r"test_data\A0014CH1.CSV", r"test_data\A0014CH2.CSV"])
 
-data = {'Function generator': GwInstekReader(filepaths[0]), 'FPGA trigger': GwInstekReader(filepaths[1])}
+data = {'Function generator': GwInstekReader(filepaths[1]), 'FPGA trigger': GwInstekReader(filepaths[0])}
 
 for key, ds in data.items():
     plt.plot(ds.t/1e-6, ds.y, label=f"{key} signal")
@@ -32,7 +32,10 @@ plt.legend()
 # Combined plot
 plt.figure()
 for key, ds in data.items():
+    print(key)
     plt.plot((ds.t/1e-6)-79, ds.y, label=f"{key} signal")
+
+plt.legend()
 
 sf = 0.001
 offset = 10
@@ -53,6 +56,7 @@ print(f"Delay = {lag} us")
 
 plt.plot((t/1e-6) - lag, sf*ch1 + offset, label="Ch 1 - FPGA (Adjusted by delay)")
 plt.plot((t/1e-6) - lag, sf*ch2 + offset, label="Ch 2 - FPGA (Adjusted by delay)")
-plt.xlim(0, 12)
-
+plt.xlim(0, 18)
+plt.xlabel("t (us)")
+plt.ylabel("Signal")
 plt.legend()
