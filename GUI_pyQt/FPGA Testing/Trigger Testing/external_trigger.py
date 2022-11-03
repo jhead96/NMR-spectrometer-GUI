@@ -98,25 +98,65 @@ def plot_data_from_worker(scan, ch1, ch2, ch1_avg, ch2_avg):
     ax2.set_title(f"Spectrometer signal for scan {scan}/{N_scans-1}")
     plt.draw()
 
-    # Calculate avg magnitude
+    """# Calculate avg magnitude
     magnitude = np.sqrt((ch1_avg ** 2) + (ch2_avg ** 2))
 
     # Plot magnitude
     magline.set_data(t/1e-6, magnitude)
     fig2_ax1.set_title(f"Magnitude of spectrometer signal for scan {scan}/{N_scans-1}")
-    plt.draw()
+    plt.draw()"""
 
     # Save ch1, ch2 to file
     header = analysis_functions.generate_datafile_header(**params)
     np.savetxt(f"{save_filename}_{scan}.txt", (t/1e-6, ch1, ch2), header=header, comments="")
 
-# Connect to SDR-14
-try:
-    device = sdr14()
-except Exception as ex:
-    device = None
-    print("No device connected!")
-    #sys.exit()
+def init_plots():
+    # Initialize figures
+    fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
+
+    # ax1
+    avgline1, = ax1.plot([], [], "b-", label="Ch1")
+    avgline2, = ax1.plot([], [], "r-", label="Ch2")
+    ax1.set_xlabel("t (us)")
+    ax1.set_ylabel("Signal")
+    ax1.set_xlim(0, 85)
+    ax1.set_ylim(-100, 100)
+    ax1.legend()
+
+    # ax2
+    line1, = ax2.plot([], [], "b-", label="Ch1")
+    line2, = ax2.plot([], [], "r-", label="Ch2")
+    ax2.set_xlabel("t (us)")
+    ax2.set_ylabel("Signal")
+    ax2.set_xlim(0, 85)
+    ax2.set_ylim(-100, 100)
+    ax2.legend()
+
+    """fig2, fig2_ax1 = plt.subplots()
+    magline, = fig2_ax1.plot([], [], "g-")
+    fig2_ax1.set_xlabel("t (us)")
+    fig2_ax1.set_ylabel("Signal")
+    fig2_ax1.set_xlim(0, 85)
+    fig2_ax1.set_ylim(-100, 100)"""
+
+    return fig1, ax1, line1, line2, ax2, avgline1, avgline2
+
+def find_sdr14():
+    # Connect to SDR-14
+    try:
+        device = sdr14()
+    except Exception as ex:
+        device = None
+        print("No device connected!")
+        # sys.exit()
+    return device
+
+# Get sdr14
+device = find_sdr14()
+
+# Initialise plots
+fig1, ax1, line1, line2, ax2, avgline1, avgline2 = init_plots()
+
 
 # Experimental parameters
 params = {"f": 213e6, "P1": 2e3, "P2": 4e3, "G1": 10e3, "rec": 10e3, "atten": 10}
@@ -131,34 +171,6 @@ t = np.arange(0, N*Ts, Ts)
 
 # Save parameters
 save_filename = "test_data"
-
-# Initialize figures
-fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-
-# ax1
-avgline1, = ax1.plot([], [], "b-", label="Ch1")
-avgline2, = ax1.plot([], [], "r-", label="Ch2")
-ax1.set_xlabel("t (us)")
-ax1.set_ylabel("Signal")
-ax1.set_xlim(0, 85)
-ax1.set_ylim(-100, 100)
-ax1.legend()
-
-# ax2
-line1, = ax2.plot([], [], "b-", label="Ch1")
-line2, = ax2.plot([], [], "r-", label="Ch2")
-ax2.set_xlabel("t (us)")
-ax2.set_ylabel("Signal")
-ax2.set_xlim(0, 85)
-ax2.set_ylim(-100, 100)
-ax2.legend()
-
-fig2, fig2_ax1 = plt.subplots()
-magline, = fig2_ax1.plot([], [], "g-")
-fig2_ax1.set_xlabel("t (us)")
-fig2_ax1.set_ylabel("Signal")
-fig2_ax1.set_xlim(0, 85)
-fig2_ax1.set_ylim(-100, 100)
 
 # Make SDR14 worker thread
 # Setup new thread for continuous acquisition
@@ -175,53 +187,3 @@ liveWorker.finished.connect(liveWorker.deleteLater)
 
 # Start thread
 liveThread.start()
-
-
-
-"""
-for i in range(0, N_scans):
-
-    if i == 0:
-        # Connect to SDR-14
-        try:
-            device = sdr14()
-        except Exception as ex:
-            print("No device connected!")
-            sys.exit()
-
-    # Define regs
-    f_reg = 1
-    P1_reg = 2
-    P2_reg = 3
-    G1_reg = 5
-    rec_reg = 7
-
-    # Set up two pulse sequence
-    f = int(213 * 1000 * 1000)
-    P1 = int(2 * 1000)
-    P2 = int(4 * 1000)
-    G1 = 10 * 1000
-    rec = 10 * 1000
-
-    device.reg_write(f_reg, f)
-    device.reg_write(P1_reg, P1)
-    device.reg_write(P2_reg, P2)
-    device.reg_write(G1_reg, G1)
-    device.reg_write(rec_reg, rec)
-
-    ch1, ch2 = device.External_MR_acquisition("0")
-    # Calculate t axis
-    N = ch1.size
-    fs = 800e6
-    Ts = 1/fs
-    t = np.arange(0, N*Ts, Ts)
-
-    plt.plot(t/1e-6, ch1)
-    plt.plot(t/1e-6, ch2)
-
-
-    #np.savetxt(f"cobalt_signal_p2_2pt0us_{i}", np.array([t, ch1, ch2]))
-    print(f"{i}th repeat finished ------------------")
-
-print("EXPERIMENT FINISHED!")
-"""

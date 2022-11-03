@@ -626,7 +626,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
 
         # Arm trigger
         self.arm_MR_trigger()
-        time.sleep(1)
+        time.sleep(0.1)
         # Acquire data
         self.enable_dev()
         time.sleep(1)
