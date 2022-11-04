@@ -1,8 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.fft
+import matplotlib
+matplotlib.use("Qt5Agg")
+import matplotlib.pyplot as plt
 
-def generate_test_signal(f, fs, N):
+
+def generate_test_signal(f: float, fs: float, N: int, N_bits: int) -> tuple[np.ndarray, any, np.ndarray[str]]:
 
     # Signal parameters
     Ts = 1 / fs
@@ -13,16 +16,19 @@ def generate_test_signal(f, fs, N):
     # Generate signal
     test_signal = np.sin(omega_0 * t)
 
-    # Scale to 14 bits for test signal
-    scaled_test_signal = np.round(test_signal * 8000).astype(int)
+    # Scale to fit in N_bits
+    scale_factor = (2**(N_bits-1) - 1)
 
-    scaled_test_signal_fp = f"Test input signals/test_signal_{int(f / 1e6)}MHz.txt"
+    scaled_test_signal = np.round(test_signal * scale_factor).astype(int)
 
-    saved_binary_data = generate_binary_file(scaled_test_signal, 14, scaled_test_signal_fp)
+    scaled_test_signal_fp = f"input_signals/{N_bits}bit_test_signal_{int(f / 1e6)}MHz.txt"
+
+    saved_binary_data = generate_binary_file(scaled_test_signal, N_bits, scaled_test_signal_fp)
 
     return t, scaled_test_signal, saved_binary_data
 
-def generate_binary_file(data, b, filename):
+
+def generate_binary_file(data: np.ndarray[str], b: int, filename: str) -> np.ndarray[str]:
     """
     Generate binary files.
     :param data: Data to be written to file.
@@ -39,7 +45,8 @@ def generate_binary_file(data, b, filename):
 
     return np.array(binary_data)
 
-def generate_FFT(t, signal):
+
+def generate_FFT(t: np.ndarray[float], signal: np.ndarray[float]) -> tuple[np.ndarray[float], np.ndarray[float]]:
 
     N = signal.size
     Ts = t[1] - t[0]
@@ -49,9 +56,10 @@ def generate_FFT(t, signal):
 
     return xf, yf
 
-def plot_signal(f, t, signal, xf, yf):
 
-    fig1, (ax1, ax2) = plt.subplots(1,2)
+def plot_signal(f: float, t: np.ndarray[float], signal: np.ndarray[float], xf: np.ndarray[float], yf: np.ndarray[float]):
+
+    fig1, (ax1, ax2) = plt.subplots(1, 2)
 
     ax1.plot(t/1e-6, signal)
     ax1.set_xlabel("t (us)")
@@ -63,10 +71,11 @@ def plot_signal(f, t, signal, xf, yf):
     ax2.set_ylabel("Intensity")
     ax2.set_title(f"FFT of {int(f / 1e6)}MHz test signal")
 
-def read_test_signal(f):
+
+def read_test_signal(f: float) -> np.ndarray[int]:
 
 
-    filename = f"Test input signals/test_signal_{int(f / 1e6)}MHz.txt"
+    filename = f"input_signals/test_signal_{int(f / 1e6)}MHz.txt"
     data_from_file = np.loadtxt(filename, dtype=str)
 
     file_data_decimal = []
@@ -76,7 +85,8 @@ def read_test_signal(f):
 
     return np.array(file_data_decimal)
 
-def twoscomp_bin_to_dec(bin_str, N_bits):
+
+def twoscomp_bin_to_dec(bin_str: str, N_bits: int) -> int:
 
     sign_bit = int(bin_str[0])
     val = 0
@@ -90,21 +100,22 @@ def twoscomp_bin_to_dec(bin_str, N_bits):
 
     return val
 
-# Inputs
-f = 5e6
-fs = 800e6
-N = 800
 
-t, sig, saved_binary_data = generate_test_signal(f, fs, N)
-xf, yf = generate_FFT(t, sig)
-plot_signal(f, t, sig, xf, yf)
+def main(f: float, fs: float, N_lines: int, N_bits: int):
 
-# Read back to confirm binary data matches
-sig_from_file = read_test_signal(f)
+    # Generate the signals
+    t, sig, saved_binary_data = generate_test_signal(f, fs, N_lines, N_bits)
+    xf, yf = generate_FFT(t, sig)
 
-if np.all(sig_from_file == read_test_signal(f)):
-    print("Data read from file matches generated data!")
-else:
-    print("Error in file write")
+    # Plot
+    plot_signal(f, t, sig, xf, yf)
+
+    # Read back to confirm binary data matches
+    sig_from_file = read_test_signal(f)
+
+    if np.all(sig_from_file == read_test_signal(f)):
+        print("Data read from file matches generated data!")
+    else:
+        print("Error in file write")
 
 

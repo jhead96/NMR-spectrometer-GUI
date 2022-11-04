@@ -20,7 +20,7 @@ class LiveDataCollection(QObject):
         self.params = params
         if dev:
             self.init_expt()
-            self.init_acq()
+            #self.init_acq()
 
     def init_expt(self):
         # Define regs
@@ -79,7 +79,8 @@ class LiveDataCollection(QObject):
             ch1_total += ch1
             ch2_total += ch2
             self.data_out.emit(i, ch1, ch2, ch1_total / (i + 1), ch2_total / (i + 1))
-            time.sleep(2)
+            time.sleep(1)
+            print(f"----------------Scan {i} complete!------------------")
 
     def choose_mode(self):
 
@@ -162,7 +163,7 @@ fig1, ax1, line1, line2, ax2, avgline1, avgline2 = init_plots()
 params = {"f": 213e6, "P1": 2e3, "P2": 4e3, "G1": 10e3, "rec": 10e3, "atten": 10}
 
 # Number of scans
-N_scans = 30
+N_scans = 128
 
 N = 65536
 fs = 800e6
@@ -170,7 +171,7 @@ Ts = 1/fs
 t = np.arange(0, N*Ts, Ts)
 
 # Save parameters
-save_filename = "test_data"
+save_filename = "cobalt_echo_213pt0MHz"
 
 # Make SDR14 worker thread
 # Setup new thread for continuous acquisition

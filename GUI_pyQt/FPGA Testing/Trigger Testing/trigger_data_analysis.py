@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Read scope data
-filepaths = np.array([r"test_data\A0014CH1.CSV", r"test_data\A0014CH2.CSV"])
+filepaths = np.array([r"simulation_outputs\A0014CH1.CSV", r"simulation_outputs\A0014CH2.CSV"])
 
 data = {'Function generator': GwInstekReader(filepaths[1]), 'FPGA trigger': GwInstekReader(filepaths[0])}
 
