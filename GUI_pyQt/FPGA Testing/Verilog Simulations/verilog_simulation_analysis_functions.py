@@ -94,7 +94,8 @@ def main(sim_filepath: str, N_samples: int, order_reversed: bool, N_bits: int, f
     :param N_samples: Number of samples per line.
     :param order_reversed: True if time ordering of samples goes from right -> left
     :param N_bits: Number of bits to use when converting to signed decimal.
-    :param fs: Sampling frequency used in FFT
+    :param fs: Sampling frequency used in FFT.
+    :param save_filename: Name of saved decimal file
     :param sim_params: Dictionary of parameters to used in the header in saved decimal datafile
     :return:
     """
