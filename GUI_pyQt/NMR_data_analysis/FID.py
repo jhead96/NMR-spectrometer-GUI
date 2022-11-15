@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
+import scipy.signal
 
 class FID:
 
@@ -32,6 +32,11 @@ class FID:
     def filter_FID(self, f_co):
         pass
 
+    @staticmethod
+    def generate_filter_coefficients(f_cutoff: float, fs, n_taps : int) -> np.array:
+        coeffs = scipy.signal.firwin(n_taps, f_cutoff, fs=fs)
+        return coeffs
+
     def calc_magnitude(self):
         pass
 
@@ -40,3 +45,9 @@ class FID:
 
     def plot_FID(self):
         pass
+
+
+t = FID.generate_filter_coefficients(100e6, 400e6, 23)
+
+w, h = scipy.signal.freqz(t, fs=400e6)
+plt.plot(w, 10*np.log10(np.abs(h)))

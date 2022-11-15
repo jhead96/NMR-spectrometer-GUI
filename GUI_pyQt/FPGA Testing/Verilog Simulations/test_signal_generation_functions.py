@@ -5,7 +5,7 @@ matplotlib.use("Qt5Agg")
 import matplotlib.pyplot as plt
 
 
-def generate_test_signal(f: float, fs: float, N: int, N_bits: int) -> tuple[np.ndarray, any, np.ndarray[str]]:
+def generate_test_signal(f: float, fs: float, N: int, N_bits: int, sig_type: str = "sin") -> tuple[np.ndarray, any, np.ndarray[str]]:
 
     # Signal parameters
     Ts = 1 / fs
@@ -14,14 +14,20 @@ def generate_test_signal(f: float, fs: float, N: int, N_bits: int) -> tuple[np.n
     omega_0 = 2 * np.pi * f
 
     # Generate signal
-    test_signal = np.sin(omega_0 * t)
+    if sig_type == "sin":
+        test_signal = np.sin(omega_0 * t)
+    elif sig_type == "cos":
+        test_signal = np.cos(omega_0 * t)
+    else:
+        test_signal = None
+        print("Invalid test signal type")
 
     # Scale to fit in N_bits
     scale_factor = (2**(N_bits-1) - 1)
 
     scaled_test_signal = np.round(test_signal * scale_factor).astype(int)
 
-    scaled_test_signal_fp = f"input_signals/{N_bits}bit_test_signal_{int(f / 1e6)}MHz.txt"
+    scaled_test_signal_fp = f"input_signals/{N_bits}bit_{sig_type}_test_signal_{int(f / 1e6)}MHz.txt"
 
     saved_binary_data = generate_binary_file(scaled_test_signal, N_bits, scaled_test_signal_fp)
 
@@ -72,10 +78,10 @@ def plot_signal(f: float, t: np.ndarray[float], signal: np.ndarray[float], xf: n
     ax2.set_title(f"FFT of {int(f / 1e6)}MHz test signal")
 
 
-def read_test_signal(f: float) -> np.ndarray[int]:
+def read_test_signal(f: float, N_bits: int, sig_type: str) -> np.ndarray[int]:
 
 
-    filename = f"input_signals/test_signal_{int(f / 1e6)}MHz.txt"
+    filename = f"input_signals/{N_bits}bit_{sig_type}_test_signal_{int(f / 1e6)}MHz.txt"
     data_from_file = np.loadtxt(filename, dtype=str)
 
     file_data_decimal = []
@@ -101,19 +107,19 @@ def twoscomp_bin_to_dec(bin_str: str, N_bits: int) -> int:
     return val
 
 
-def main(f: float, fs: float, N_lines: int, N_bits: int):
+def main(f: float, fs: float, N_lines: int, N_bits: int, sig_type: str):
 
     # Generate the signals
-    t, sig, saved_binary_data = generate_test_signal(f, fs, N_lines, N_bits)
+    t, sig, saved_binary_data = generate_test_signal(f, fs, N_lines, N_bits, sig_type)
     xf, yf = generate_FFT(t, sig)
 
     # Plot
     plot_signal(f, t, sig, xf, yf)
 
     # Read back to confirm binary data matches
-    sig_from_file = read_test_signal(f)
+    sig_from_file = read_test_signal(f, N_bits, sig_type)
 
-    if np.all(sig_from_file == read_test_signal(f)):
+    if np.all(sig_from_file == read_test_signal(f, N_bits, sig_type)):
         print("Data read from file matches generated data!")
     else:
         print("Error in file write")

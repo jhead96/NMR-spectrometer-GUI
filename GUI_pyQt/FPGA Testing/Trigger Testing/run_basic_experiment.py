@@ -160,7 +160,7 @@ fig1, ax1, line1, line2, ax2, avgline1, avgline2 = init_plots()
 
 
 # Experimental parameters
-params = {"f": 213e6, "P1": 2e3, "P2": 4e3, "G1": 10e3, "rec": 10e3, "atten": 10}
+params = {"f": 213e6, "P1": 4e3, "P2": 2e3, "G1": 1000e3, "rec": 10e3, "atten": 10}
 
 # Number of scans
 N_scans = 128
@@ -171,7 +171,7 @@ Ts = 1/fs
 t = np.arange(0, N*Ts, Ts)
 
 # Save parameters
-save_filename = "cobalt_echo_213pt0MHz"
+save_filename = "cobalt_T1_1000us"
 
 # Make SDR14 worker thread
 # Setup new thread for continuous acquisition
