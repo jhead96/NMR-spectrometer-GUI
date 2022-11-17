@@ -14,22 +14,23 @@ data = np.zeros((n_data, 3, n_files))
 for i, f in enumerate(filenames):
     data[:, :, i] = np.loadtxt(dirpath + f, skiprows=header_size)
 
-t = data[:, 0, 0]
-Mx = data[:, 1, 0]
-My = data[:, 2, 0]
-mag = ((Mx**2) + (My**2)) ** 0.5
+# Calculate magnitude
+Mx_sq = data[:, 1, :] ** 2
+My_sq = data[:, 2, :] ** 2
+mag = (Mx_sq + My_sq) ** 0.5
+
+data = np.hstack((data, mag[:, None, :]))
 
 fig1, fig1_ax1 = plt.subplots()
-
-fig1_ax1.plot(t, Mx, label="Mx")
-fig1_ax1.plot(t, My, label="My")
-fig1_ax1.plot(t, mag, label="Magnitude")
-fig1_ax1.set_title("213MHz signal, P1=2us, G1=10us, P2=4us")
+for i in range(0, n_files):
+    fig1_ax1.plot(data[:, 0, i], data[:, 3, i], label=f"f = {freqs[i]}")
+fig1_ax1.set_title("P1=4us, G1=10us, P2=2us")
 fig1_ax1.set_xlabel("t (us)")
 fig1_ax1.set_ylabel("Signal")
 fig1_ax1.set_xlim(0, 20)
 fig1_ax1.set_ylim(-100,100)
 fig1.legend()
+plt.show()
 
 
 
