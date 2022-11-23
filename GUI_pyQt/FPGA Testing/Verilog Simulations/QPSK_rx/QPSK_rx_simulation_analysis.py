@@ -25,30 +25,40 @@ sim_params = [{'f': f_test, 'phase': 270}, {'f': f_test, 'phase': 270}]
                                                save_filename=save_names[i],
                                                sim_params=sim_params[i])"""
 
-fig1, fig1_ax1 = plt.subplots()
+
 data = np.zeros((2, 800, 2))
 labs = ["I - ISIM", "Q - ISIM"]
+phase = [5*np.pi/4, 3*np.pi/4, np.pi/4, 7*np.pi/4]
+phase_lbl = ["$5\pi/4$", "$3\pi/4$", "$\pi/4$", "$7\pi/4$"]
+phase_str = ["0", "90", "180", "270"]
+phase_bin = ["00", "01", "11", "10"]
+w = 2*np.pi*f_test
 
+I_savenames = [f"{dir_path}10MHz_phase_{p}_I_decimal.txt" for p in phase_str]
+Q_savenames = [f"{dir_path}10MHz_phase_{p}_Q_decimal.txt" for p in phase_str]
 
 
 # Read data and plot
-for i in range(0, 2):
-    data[:, :, i] = np.loadtxt(save_names[i], skiprows=5, delimiter=",")
-    fig1_ax1.plot(data[0, :, i], data[1, :, i], label=labs[i])
+for i in range(0, 4):
+    I_data = np.loadtxt(I_savenames[i], skiprows=5, delimiter=",")
+    Q_data = np.loadtxt(Q_savenames[i], skiprows=5, delimiter=",")
 
-t = data[0, ::8, 0]
-w = 2*np.pi*f_test
-phase = 7*np.pi/4
 
-I_python = data.max() * np.sin(w*t + phase)
-Q_python = data.max() * np.cos(w*t + phase)
+    plt.plot(I_data[0, :], I_data[1, :], label=labs[0])
+    plt.plot(Q_data[0, :], Q_data[1, :], label=labs[1])
 
-fig1_ax1.set_prop_cycle(None)
-fig1_ax1.plot(t, I_python, ".", label="I - sin($\omega t + 7\pi/4$)")
-fig1_ax1.plot(t, Q_python, ".", label="Q - cos($\omega t + 7\pi/4$)")
 
-fig1_ax1.set_xlabel("t (s)")
-fig1_ax1.set_ylabel("signal")
-fig1_ax1.set_title("10MHz test signal rx_QPSK.v output compared to Python output for $\phi_{rx}$ = '01'")
-fig1_ax1.legend()
+    t = I_data[0, ::8]
 
+    I_python = I_data.max() * np.sin(w*t + phase[i])
+    Q_python = Q_data.max() * np.cos(w*t + phase[i])
+
+    plt.gca().set_prop_cycle(None)
+    plt.plot(t, I_python, ".", label=f"I - sin($\omega t$ + {phase_lbl[i]})")
+    plt.plot(t, Q_python, ".", label=f"Q - cos($\omega t$ + {phase_lbl[i]})")
+
+    plt.xlabel("t (s)")
+    plt.ylabel("signal")
+    plt.title(f"16-bit, 10MHz Verilog output for $\phi_{{rx}}$ = '{phase_bin[i]}'")
+    plt.legend()
+    plt.figure()

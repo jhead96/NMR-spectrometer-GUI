@@ -63,6 +63,7 @@ def calculate_FFT(x: np.ndarray[float], y: np.ndarray[float], Ts: float) -> tupl
     yf = np.abs(scipy.fft.rfft(y))
     xf = scipy.fft.rfftfreq(N, Ts)
 
+
     return xf, yf
 
 
