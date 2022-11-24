@@ -42,21 +42,29 @@ for i in range(0, 2):
 RF_data = np.loadtxt(dir_path + output_names[-1], skiprows=6, delimiter=",")
 fig1_ax1.plot(RF_data[0,:], RF_data[1,:], label="RF - ISIM")
 
-t_RX = IQ_data[0, :, 0]
+t_RX = IQ_data[0, ::8, 0]
 t_TX = RF_data[0, ::8]
 w = 2*np.pi*f_test
-RX_phase = 3 * np.pi / 4
+RX_phase = 5 * np.pi / 4
 TX_phase = 5 * np.pi / 4
 
 
-#I_python = IQ_data.max() * np.sin(w * t_RX + RX_phase)
-#Q_python = IQ_data.max() * np.cos(w * t_RX + RX_phase)
+I_python = IQ_data.max() * np.sin(w * t_RX + RX_phase)
+Q_python = IQ_data.max() * -np.cos(w * t_RX + RX_phase)
 RF_python = RF_data.max() * np.sin(w * t_TX + TX_phase)
 
 fig1_ax1.set_prop_cycle(None)
 
-#fig1_ax1.plot(t_RX, I_python, "-", label="I - sin($\omega t + 7\pi/4$)")
-#fig1_ax1.plot(t_RX, Q_python, "-", label="Q - cos($\omega t + 7\pi/4$)")
-fig1_ax1.plot(t_TX-0.5e-8, RF_python, ".", label="RF - sin($\omega t + 5\pi/4$)")
+offset = {'RX_00': np.array([0.5, 1, 0.5])*1e-8, 'RX_11': np.array([0, 0, 0])*1e-8}
 
+dataset_lbl = "RX_00"
+
+fig1_ax1.plot(t_RX-offset[dataset_lbl][0], I_python, ".", label="I: sin($\omega t + 5\pi/4$)")
+fig1_ax1.plot(t_RX-offset[dataset_lbl][1], Q_python, ".", label="Q: (-1)cos($\omega t + 5\pi/4$)")
+fig1_ax1.plot(t_TX-offset[dataset_lbl][2], RF_python, ".", label="RF: sin($\omega t + 5\pi/4$)")
+
+fig1_ax1.set_xlabel("t (s)")
+fig1_ax1.set_ylabel("signal")
+fig1_ax1.set_title("10MHz ISIM and Python outputs for signal_generator_tb.v\n"
+                   "$\phi_{TX}$ = 00, $\phi_{RX} = 00$")
 fig1_ax1.legend()
