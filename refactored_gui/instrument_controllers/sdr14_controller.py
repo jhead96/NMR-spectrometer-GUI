@@ -8,28 +8,30 @@ class SDR14():
     def __init__(self, api_path: str = r"M:\Research\NEW FPGA development\NMR spectrometer GUI\refactored_gui\instrument_controllers\ADQAPI.dll") -> None:
         self.api_path = api_path
 
-        # Get api and assign control unit and device number
+        # Get api
         self.api = self.retrieve_api()
-        self.cu = self.create_control_unit()
-        self.device_number = self.get_device_number()
 
-        # Set default return types
-        self.set_default_types()
+        # If api is found set-up device
+        if self.api:
+            self.cu = self.create_control_unit()
+            self.device_number = self.get_device_number()
 
-        # Initialise device registers
-        self.num_registers = 16
-        self.initialise_registers()
+            # Set default return types
+            self.set_default_types()
+
+            # Initialise device registers
+            self.num_registers = 16
+            self.initialise_registers()
 
     def retrieve_api(self) -> ct.CDLL:
 
-
-        api = ct.cdll.LoadLibrary(self.api_path)
-
-        """except OSError as ex:
+        try:
+            api = ct.cdll.LoadLibrary(self.api_path)
+        except OSError as ex:
             print(ex)
             print("Invalid ADQAPI.dll filepath or ADQ software development kit not installed!")
-            print("Exiting...")
-            sys.exit()"""
+            print("ADQAPI functions disabled!")
+            api = None
 
         return api
 
@@ -40,6 +42,13 @@ class SDR14():
         self.api.ADQControlUnit_FindDevices(cu)
 
         return cu
+
+    def delete_control_unit(self):
+
+        conf = self.api.DeleteADQControlUnit(self.cu)
+
+        if conf:
+            print("Control unit deleted!")
 
     def get_device_number(self):
         return 0

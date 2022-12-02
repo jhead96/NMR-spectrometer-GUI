@@ -1,5 +1,3 @@
-from abc import abstractmethod
-
 class FileManager:
 
     def __init__(self, data, save_filename) -> None:
