@@ -1,10 +1,10 @@
 from dataclasses import dataclass, asdict, fields
 import numpy as np
 
+
 @dataclass
 class Sequence:
 
-    name: str
     frequency: int
     TX_phase: int
     RX_phase: int
@@ -14,8 +14,13 @@ class Sequence:
     g2: int
     p3: int
     rec: int = 0
+    name: str = ""
 
     def __post_init__(self) -> None:
+        """
+        Converts data into format for saving.
+        :return:
+        """
         self.valid_sequence = 1
         # Convert fields to int
         self.convert_to_int()
@@ -24,16 +29,29 @@ class Sequence:
 
     # noinspection PyTypeChecker
     def save_to_file(self, save_path: str) -> None:
+        """
+        Convenience method to save class fields to the specified file.
+        :param save_path: File path to save to.
+        :return:
+        """
 
         np.savetxt(save_path, self.formatted_data, delimiter="\n")
         print(f"Sequence saved to {save_path}")
 
     def convert_to_dict(self) -> dict:
+        """
+        Convenience method for returning fields as a dictionary.
+        :return: dict
+        """
         return asdict(self)
 
     def convert_to_int(self) -> None:
+        """
+        Converts all valid fields to int.
+        :return:
+        """
 
-        # Convert all values to int except name if not Nont
+        # Convert all values to int except name if not None
         for field in fields(self):
             if issubclass(field.type, int):
                 value = getattr(self, field.name)
@@ -43,3 +61,4 @@ class Sequence:
                     print(ex)
                     print(f"{field.name} is empty!")
                     self.valid_sequence = 0
+

@@ -17,9 +17,14 @@ from instrument_controllers.ppms_controller import PPMS
 # Data handling objects
 from data_handling.sample import Sample
 from data_handling.sequence import Sequence
+from data_handling.command import NMRCommand, PPMSCommand, PPMSFieldCommand, PPMSTemperatureCommand
+from data_handling import *
 
-# Tab management
-from tab_managers.tab_manager import TabManager
+# Experiment management
+from experiment_manager import ExperimentManager
+
+
+
 
 # noinspection PyUnresolvedReferences
 class SpecMRWorker(QObject):
@@ -195,7 +200,7 @@ class RunApp(Ui_MainWindow):
     Class to handle operation of the GUI on the main thread.
     """
 
-    def __init__(self, window):
+    def __init__(self, window) -> None:
 
         # Setup GUI components
         self.setupUi(window)
@@ -218,6 +223,9 @@ class RunApp(Ui_MainWindow):
         self.default_seq_filepath = 'sequences\\'
         self.default_data_filepath = 'data\\'
 
+        # Initialise manager for experiment
+        self.expt_manager = ExperimentManager()
+
         # Initialise data file cache
         self.data_file_cache = []
 
@@ -231,6 +239,10 @@ class RunApp(Ui_MainWindow):
         self.num_parameters = 6
 
     def connect_button_functions(self) -> None:
+        """
+        Connects functions to button click events
+        :return:
+        """
 
         # Sample tab
         self.confirmSampleInfoBtn.clicked.connect(self.get_sample_info)
@@ -249,6 +261,10 @@ class RunApp(Ui_MainWindow):
         self.startExptBtn.clicked.connect(self.run_expt)
 
     def initialise_plot_widgets(self) -> None:
+        """
+        Initialises figure and axes for plotting.
+        :return:
+        """
 
         # Assign axes to variables
         time_plot_ax = self.timePlotWidget.canvas.ax
@@ -266,9 +282,9 @@ class RunApp(Ui_MainWindow):
 
     def get_sample_info(self) -> None:
         """
-        Updates active sample from data entered into sample tab.
+        Updates active sample from information in the sample tab
+        :return:
         """
-
         # Read sample information from text-boxes
         name = self.sampleNameLineEdit.text()
         mass = self.sampleMassLineEdit.text()
@@ -290,7 +306,8 @@ class RunApp(Ui_MainWindow):
 
     def clear_sample_info(self) -> None:
         """
-        Clears sample info from the class.
+        Clears active sample info from the class.
+        :return:
         """
         # Reset internal sample variables
         self.active_sample = None
@@ -307,11 +324,12 @@ class RunApp(Ui_MainWindow):
     def save_seq_file(self) -> None:
         """
         Saves sequence values from the 'Sequence' tab into a .seq file.
+        :return:
         """
         # Get save data filepath using windows dialog
-        save_filename = QtWidgets.QFileDialog.getSaveFileName(filter="seq files (*.seq)")
+        save_filename = self.get_filepath_from_dialog()
         # Combine data from text-boxes into array
-        save_data = np.array(["", self.frequencyLineEdit.text(), "90", "180",
+        save_data = np.array([self.frequencyLineEdit.text(), "90", "180",
                               self.pulse1LenLineEdit.text(), self.gapLenLineEdit.text(), self.pulse2LenLineEdit.text(),
                               "2", "3", self.recLenLineEdit.text()])
         # Make Sequence object
@@ -319,15 +337,16 @@ class RunApp(Ui_MainWindow):
 
         # Save data
         if seq.valid_sequence:
-            seq.save_to_file(save_filename[0])
+            seq.save_to_file(save_filename)
             # Update saved file text-box
-            self.savedSeqLineEdit.setText(save_filename[0])
+            self.savedSeqLineEdit.setText(save_filename)
         else:
             self.show_dialog("Invalid sequence parameters!")
 
     def load_seq_file(self) -> None:
         """
         Loads values from the designated sequence file into the 'Sequence' tab for editing.
+        :return:
         """
 
         def set_combo_box(combo_box, phase: int):
@@ -347,8 +366,8 @@ class RunApp(Ui_MainWindow):
         # Set loaded file textbox
         self.loadedSeqLineEdit.setText(load_filename)
         # Load data
-        seq_data = np.loadtxt(load_filepath[0], dtype=int)
-        loaded_seq = Sequence(*["", *seq_data.tolist()])
+        seq_data = np.loadtxt(load_filepath[0]).astype(np.int64)
+        loaded_seq = Sequence(*seq_data)
         # Move values from file into text-boxes
         self.frequencyLineEdit.setText(str(loaded_seq.frequency))
         self.pulse1LenLineEdit.setText(str(loaded_seq.p1))
@@ -361,6 +380,7 @@ class RunApp(Ui_MainWindow):
     def clear_seq_line_edits(self) -> None:
         """
         Clears all text-boxes on the 'Sequence' tab.
+        :return:
         """
         # Clear all text boxes
         self.frequencyLineEdit.setText('')
@@ -372,9 +392,32 @@ class RunApp(Ui_MainWindow):
         # Reset phase combo box
         self.phaseComboBox.setCurrentIndex(0)
 
-    def add_NMR_command(self):
+    def update_experiment_treewidget(self) -> None:
         """
-        Allows a .seq file to be selected from a file dialog and added to the experiment tree widget.
+        Updates the Experiment TreeWidget to display all commands in the experiment manager.
+        :return:
+        """
+
+        # Clear treewidget
+        self.exptTreeWidget.clear()
+
+        print(self.expt_manager.command_list)
+        # Repopulate treewidget
+        for com in self.expt_manager.command_list:
+            # If command is NMRCommand
+            if isinstance(com, NMRCommand):
+                item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, [com.command_type, com.sequence_filepath, str(com.repeats)])
+            # Else command is PPMSCommand
+            else:
+                item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, [com.command_type, com.command_lbl, "--"])
+
+            # Add item
+            self.exptTreeWidget.addTopLevelItem(item)
+
+    def add_NMR_command(self) -> None:
+        """
+        Adds an NMR command to the Experiment TreeWidget.
+        :return:
         """
         # Open file dialog
         load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
@@ -383,36 +426,53 @@ class RunApp(Ui_MainWindow):
 
         if load_filename:
             # Get number of repeats
-            repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1 )
+            repeats, _ = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1 )
 
-            # Add data to tree widget [TYPE,  SEQ NAME, REPEATS]
-            if valid and repeats > 0:
-                item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['NMR', load_filename, str(repeats)])
-                self.exptTreeWidget.addTopLevelItem(item)
+            # Make new command
+            command = NMRCommand(load_filepath[0], repeats)
+
+            if command.valid_command:
+                # Add command to manager
+                self.expt_manager.add_command(command)
+                self.update_experiment_treewidget()
+
             else:
                 self.show_dialog('Invalid entry!')
 
-    def add_PPMS_command(self):
+    def add_PPMS_command(self) -> None:
+        """
+        Adds a PPMS command to the Experiment TreeWidget.
+        :return:
+        """
+
+        def generate_PPMS_command(parameter: str, value: float, rate: float) -> None:
+            """
+            Generates a new PPMS command using the data provided in the PPMS data window.
+            :param parameter: Type of Command either "Temperature" or "Magnetic Field".
+            :param value: Set value for the command.
+            :param rate: Rate to be used.
+            :return:
+            """
+            self.ppms_window.destroy()
+
+            if parameter == "Temperature":
+                new_command = PPMSTemperatureCommand(value, rate)
+            else:
+                new_command = PPMSFieldCommand(value, rate)
+
+            self.expt_manager.add_command(new_command)
+            self.update_experiment_treewidget()
+
 
         # Bring up PPMS command window
         self.ppms_window = QtWidgets.QMainWindow()
         self.ui = runPPMSCommandWindow(self.ppms_window)
-        self.ui.submitted.connect(self.add_PPMS_command_to_expt)
+        self.ui.PPMS_parameters.connect(generate_PPMS_command)
         self.ppms_window.show()
 
-    def add_PPMS_command_to_expt(self, parameter, value, rate):
-        self.ppms_window.destroy()
-
-        if parameter == '0':
-            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Temperature', f'Set Temperature to {value}K.\nRate: {rate}K/s.', '--'])
-            self.exptTreeWidget.addTopLevelItem(item)
-        else:
-            item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, ['PPMS - Magnetic Field', f'Set Magnetic Field to {value}Oe.\nRate: {rate}Oe/s.', '--'])
-            self.exptTreeWidget.addTopLevelItem(item)
-
-    def remove_command(self):
+    def remove_command(self) -> None:
         """
-        Removes the selected sequence from the Experiment tree widget
+        Removes the selected command from the Experiment TreeWidget.
         """
         # Check for selected items
         selected_item = self.exptTreeWidget.selectedItems()
@@ -421,46 +481,62 @@ class RunApp(Ui_MainWindow):
             # Get selected node
             baseNode = selected_item[0]
             # Get index of selected node
-            index = self.exptTreeWidget.indexFromItem(baseNode)
+            index = self.exptTreeWidget.indexFromItem(baseNode).row()
             # Delete selected node
-            self.exptTreeWidget.takeTopLevelItem(index.row())
+            self.expt_manager.delete_command(index)
+            # Refresh tree widget
+            self.update_experiment_treewidget()
 
-    def edit_command(self):
+    def edit_command(self) -> None:
         """
-        Allows the user to edit the number of repeats for an NMR sequence in the Experiment tree widget.
-
+        Edits the number of repeats or the set value and rate of a selected command.
+        :return:
         """
-        # Check for selected items
-        selected_item = self.exptTreeWidget.selectedItems()
 
-        # If an item is selected
-        if selected_item:
-            # Get node from tree
-            node = selected_item[0]
-            type = node.text(0)
+        # Check for selected item
+        selected_item = self.exptTreeWidget.selectedItems()[0]
 
-            if type == 'PPMS - Temperature':
-                value, valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit temperature',
-                                                                'Enter temperature (2K - 400K)', min=2, max=400, decimals=3)
-                if valid:
-                    # Write to tree
-                    node.setText(1, f'Set Temperature to {float(value)}K ')
+        if not selected_item:
+            return
 
-            elif type == 'PPMS - Magnetic Field':
-                value, valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit magnetic field',
-                                                                'Enter magnetic field (-70000Oe - 70000Oe)', min=-70000, max=70000, value=0,
-                                                                 decimals=3)
-                if valid:
-                    # Write to tree
-                    node.setText(1, f'Set Magnetic Field to {float(value)}Oe ')
+        item_index = self.exptTreeWidget.indexOfTopLevelItem(selected_item)
+        command_type = self.expt_manager.get_command_type(item_index)
 
-            else:
-                # Get new value for repeats
-                repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1)
+        value = None
+        rate = None
+        value_valid = None
+        rate_valid = None
 
-                if valid:
-                    # Write to tree
-                    node.setText(2, f'{repeats}')
+        # If NMRCommand
+        if command_type is NMRCommand:
+            repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1)
+            if valid:
+                self.expt_manager.edit_command(item_index, repeats=repeats)
+
+        # If PPMSTemperatureCommand
+        elif command_type is PPMSTemperatureCommand:
+            value, value_valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit temperature',
+                                                                  'Enter temperature (2K - 400K)',
+                                                                  min=2, max=400, decimals=3)
+
+            rate, rate_valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit rate',
+                                                                'Enter temperature rate (2K/s - 20K/s)',
+                                                                min=2, max=20, decimals=3)
+        # If PPMSFieldCommand
+        else:
+            value, value_valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit magnetic field',
+                                                            'Enter magnetic field (-70,000Oe - 70,000Oe)', min=-70000, max=70000, decimals=3)
+            rate, rate_valid = QtWidgets.QInputDialog.getDouble(self.dialog, 'Edit rate',
+                                                            'Enter magnetic field rate (10Oe/s - 500Oe/s)', min=10, max=500, decimals=3)
+
+        # Set PPMSCommand parameters
+        if value_valid:
+            self.expt_manager.edit_command(item_index, value=value)
+        if rate_valid:
+            self.expt_manager.edit_command(item_index, rate=rate)
+
+        # Update treewidget
+        self.update_experiment_treewidget()
 
     def run_expt(self):
 
@@ -938,10 +1014,9 @@ class RunApp(Ui_MainWindow):
         self.frqPlotWidget.canvas.ax.set_title('Spectrum')
         self.frqPlotWidget.canvas.draw()
 
-    def show_dialog(self, msg_text):
+    def show_dialog(self, msg_text: str) -> None:
         """
         Convenience function to show a warning dialog with custom text.
-
         """
 
         msgbox = QtWidgets.QMessageBox()
@@ -949,6 +1024,16 @@ class RunApp(Ui_MainWindow):
         msgbox.setWindowTitle("Warning")
         msgbox.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msgbox.exec()
+
+    def get_filepath_from_dialog(self, filt: str ="seq files (*.seq)") -> str:
+
+        filepath = QtWidgets.QFileDialog.getSaveFileName(filter=filt)[0]
+
+        if filepath:
+            return filepath
+        else:
+            self.show_dialog("No filepath selected!")
+            return ""
 
 
 def close_GUI():

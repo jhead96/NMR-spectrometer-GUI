@@ -1,14 +1,19 @@
 from dataclasses import dataclass, asdict
-from typing import Union
+
 
 @dataclass
 class Sample:
 
     name: str
-    mass: Union[str, float]
+    mass: str | float
     shape: str
 
     def __post_init__(self) -> None:
+        """
+        Checks whether user input is valid. A non-empty string must be provided for 'name'. A float must be provided for
+        mass.
+        :return:
+        """
 
         self.valid_mass = 1
         self.valid_name = 1
@@ -25,4 +30,8 @@ class Sample:
             self.valid_name = 0
 
     def convert_to_dict(self) -> dict:
+        """
+        Convenience method for returning fields as a dictionary.
+        :return: dict
+        """
         return asdict(self)
