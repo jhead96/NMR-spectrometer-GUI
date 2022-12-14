@@ -903,7 +903,7 @@ class Ui_MainWindow(object):
         self.sequenceTitleLbl.setText(_translate("MainWindow", "Sequence"))
         self.createSeqLbl.setText(_translate("MainWindow", "Create"))
         self.gapLenLbl.setText(_translate("MainWindow", "Gap 1 length (ns)"))
-        self.frequencyLbl.setText(_translate("MainWindow", "Frequency (MHz)"))
+        self.frequencyLbl.setText(_translate("MainWindow", "Frequency (Hz)"))
         self.txPhaseLbl.setText(_translate("MainWindow", "TX phase"))
         self.pulse1LenLbl.setText(_translate("MainWindow", "Pulse 1 length (ns)"))
         self.pulse2LenLbl.setText(_translate("MainWindow", "Pulse 2 length (ns)"))

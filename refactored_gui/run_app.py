@@ -1,13 +1,12 @@
-from gui_8 import *
+from gui_9 import *
 from run_PPMS_command_window import *
 
 import sys
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy
 import time
 import os
-from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 
 # Instrument controllers
@@ -17,182 +16,10 @@ from instrument_controllers.ppms_controller import PPMS
 # Data handling objects
 from data_handling.sample import Sample
 from data_handling.sequence import Sequence
-from data_handling.command import NMRCommand, PPMSCommand, PPMSFieldCommand, PPMSTemperatureCommand
-from data_handling import *
+from data_handling.command import NMRCommand, PPMSFieldCommand, PPMSTemperatureCommand
 
 # Experiment management
-from experiment_manager import ExperimentManager
-
-
-
-
-# noinspection PyUnresolvedReferences
-class SpecMRWorker(QObject):
-    """
-    Class to handle interfacing with the SDR14 on a Worker thread.
-    """
-
-    # Finished signal
-    finished = pyqtSignal()
-    # Data signal
-    data_out = pyqtSignal(object, object)
-    # Sequence and repeats signal
-    expt_info = pyqtSignal(object, object)
-
-    def __init__(self, device, reg_vals, num_reps, data_filepath, seq_name):
-        super().__init__()
-        self.device = device
-        self.reg_vals = reg_vals
-        self.num_reps = int(num_reps)
-        self.num_seqs = np.size(num_reps)
-        self.data_filepath = data_filepath
-        self.seq_name = seq_name
-
-    def run_expt(self):
-        """
-        Runs an experiment on the SDR14 using the parameters entered on the 'Experiment' tab of the GUI.
-        Saves 1 record of data from the SDR14 using the MultiRecord mode to a text file.
-        """
-        # Initialise k
-        k = 0
-        # Loop for number of repeats
-        while k < self.num_reps:
-
-            # Loop for each register
-            for j in self.reg_vals:
-                # Write data to SDR14 register
-                self.device.reg_write(*j)
-
-            # Emit expt info
-            self.expt_info.emit(self.seq_name, k + 1)
-
-            # Enable device
-            self.device.enable_dev()
-
-            # Start MR acquisition
-            ch1_data, ch2_data = self.device.MR_acquisition()
-            # Save to file
-            data_filepath = f'{self.data_filepath}_expt{k + 1}.txt'
-            self.save_data_to_file(data_filepath, ch1_data, ch2_data)
-
-            print(f'Sequence name: {self.seq_name}')
-            print(f'Experiment number: {k+1}')
-            print(f'Data file path: {data_filepath}')
-
-            time.sleep(2)
-
-            # Disable device
-            self.device.disable_dev()
-            print('Device disabled')
-            print('')
-            print('')
-            time.sleep(2)
-            # Increment k
-            k += 1
-
-        print(f'NMR Spectrometer worker thread: Sequence {self.seq_name} finished!')
-        # Emit finished signal
-        self.finished.emit()
-
-    def save_data_to_file(self, filepath, ch1_data, ch2_data):
-        """
-        Saves data from the SDR14 to a text file.
-        """
-        save_data = np.stack((ch1_data, ch2_data), axis=1)
-
-        with open(filepath, "ab") as f:
-            np.savetxt(f, save_data, header='Ch 1 data, Ch 2 data', comments='', delimiter=',')
-            f.close()
-
-
-class SpecLiveWorker(QObject):
-    """
-    Class to handle continuous data acquisition from SDR 14 on worker thread.
-    """
-    # Signals
-    finished = pyqtSignal()
-    # Data out signal
-    data_out = pyqtSignal(object, object)
-
-    def __init__(self, device, reg_vals):
-        super().__init__()
-        self.device = device
-        self.reg_vals = reg_vals
-        self.enabled = True
-
-    def continuous_acquisition(self):
-        """
-        Function used to continuously acquire data from SDR14.
-        """
-        # Write register values
-        for i in self.reg_vals:
-            self.device.reg_write(*i)
-        # Enable device
-        self.device.enable_dev()
-
-        # Run loop until device disabled
-        while self.enabled:
-
-            ch1_data, ch2_data = self.device.MR_acquisition()
-            self.data_out.emit(ch1_data, ch2_data)
-
-    def stop_acquisition(self):
-        """
-        Stops the data acquisition from the SDR14.
-        """
-
-        self.enabled = False
-        self.device.disable_dev()
-        self.finished.emit()
-
-
-class PPMSWorker(QObject):
-    # Finished signal
-    finished = pyqtSignal()
-    # Command info signal
-    command_info = pyqtSignal(object)
-    # Parameters signal
-    parameters = pyqtSignal(float, float)
-
-
-    def __init__(self, parameter, value, rate, start_time=0):
-        super().__init__()
-        self.parameter = parameter
-        self.value = value
-        self.rate = rate
-        self.starting_value = 300.00
-        self.start_time = start_time
-
-    def set_value(self):
-
-        if self.parameter == 'T':
-            self.command_info.emit(f'\nSet temp. to {self.value}K.\n Rate {self.rate}K/s. ')
-
-            curr_val = self.starting_value
-            t = self.start_time
-            val_float = float(self.value)
-            rate_float = float(self.rate)
-            print(val_float <= curr_val)
-
-            while val_float <= curr_val:
-
-                curr_val -= rate_float
-                t += 1
-                #print(f'T={curr_val}K, t={t}s')
-                self.parameters.emit(t, curr_val)
-                time.sleep(1)
-
-            print(f'PPMS worker thread: Setting temp to {self.value}K finished!')
-
-        else:
-            self.command_info.emit(f'Setting field to {self.value}Oe at rate {self.rate}Oe/s ')
-            time.sleep(1)
-
-
-
-            print(f'PPMS worker thread: Setting field to {self.value}Oe finished!')
-
-        self.finished.emit()
+from refactored_gui.experiment_manager.experiment_manager import ExperimentManager
 
 
 class RunApp(Ui_MainWindow):
@@ -224,7 +51,8 @@ class RunApp(Ui_MainWindow):
         self.default_data_filepath = 'data\\'
 
         # Initialise manager for experiment
-        self.expt_manager = ExperimentManager()
+        self.expt_manager = ExperimentManager(self.spectrometer, self.PPMS)
+        self.expt_manager.active_command.connect(self.change_treewidget_item_colour)
 
         # Initialise data file cache
         self.data_file_cache = []
@@ -326,12 +154,16 @@ class RunApp(Ui_MainWindow):
         Saves sequence values from the 'Sequence' tab into a .seq file.
         :return:
         """
+
         # Get save data filepath using windows dialog
         save_filename = self.get_filepath_from_dialog()
         # Combine data from text-boxes into array
-        save_data = np.array([self.frequencyLineEdit.text(), "90", "180",
-                              self.pulse1LenLineEdit.text(), self.gapLenLineEdit.text(), self.pulse2LenLineEdit.text(),
-                              "2", "3", self.recLenLineEdit.text()])
+        save_data = np.array([self.frequencyLineEdit.text(), self.txPhaseComboBox.currentText(),
+                              self.rxPhaseComboBox.currentText(), self.pulse1LenLineEdit.text(),
+                              self.gapLenLineEdit.text(), self.pulse2LenLineEdit.text(),
+                              self.gap2LenLineEdit.text(), self.pulse3LenLineEdit.text(),
+                              self.recLenLineEdit.text()])
+
         # Make Sequence object
         seq = Sequence(*save_data)
 
@@ -371,11 +203,14 @@ class RunApp(Ui_MainWindow):
         # Move values from file into text-boxes
         self.frequencyLineEdit.setText(str(loaded_seq.frequency))
         self.pulse1LenLineEdit.setText(str(loaded_seq.p1))
-        self.pulse2LenLineEdit.setText(str(loaded_seq.p2))
         self.gapLenLineEdit.setText(str(loaded_seq.g1))
+        self.pulse2LenLineEdit.setText(str(loaded_seq.p2))
+        self.gap2LenLineEdit.setText(str(loaded_seq.g2))
+        self.pulse3LenLineEdit.setText(str(loaded_seq.p3))
         self.recLenLineEdit.setText(str(loaded_seq.rec))
         # Set phase combo boxes
-        set_combo_box(self.phaseComboBox, loaded_seq.TX_phase)
+        set_combo_box(self.txPhaseComboBox, loaded_seq.TX_phase)
+        set_combo_box(self.rxPhaseComboBox, loaded_seq.RX_phase)
 
     def clear_seq_line_edits(self) -> None:
         """
@@ -386,11 +221,15 @@ class RunApp(Ui_MainWindow):
         self.frequencyLineEdit.setText('')
         self.pulse1LenLineEdit.setText('')
         self.pulse2LenLineEdit.setText('')
+        self.pulse3LenLineEdit.setText('')
         self.gapLenLineEdit.setText('')
+        self.gap2LenLineEdit.setText('')
         self.recLenLineEdit.setText('')
         self.savedSeqLineEdit.setText('')
-        # Reset phase combo box
-        self.phaseComboBox.setCurrentIndex(0)
+        self.loadedSeqLineEdit.setText('')
+        # Reset phase combo boxes
+        self.txPhaseComboBox.setCurrentIndex(0)
+        self.rxPhaseComboBox.setCurrentIndex(0)
 
     def update_experiment_treewidget(self) -> None:
         """
@@ -479,9 +318,9 @@ class RunApp(Ui_MainWindow):
         # If an item is selected
         if selected_item:
             # Get selected node
-            baseNode = selected_item[0]
+            base_node = selected_item[0]
             # Get index of selected node
-            index = self.exptTreeWidget.indexFromItem(baseNode).row()
+            index = self.exptTreeWidget.indexFromItem(base_node).row()
             # Delete selected node
             self.expt_manager.delete_command(index)
             # Refresh tree widget
@@ -540,162 +379,27 @@ class RunApp(Ui_MainWindow):
 
     def run_expt(self):
 
-        # Reset command count
-        self.current_command = 0
+        self.expt_manager.start_experiment()
 
-        # Generate directory to hold output data files
-        self.create_data_directory()
+    def change_treewidget_item_colour(self, index: int):
 
-        # Check if command list is empty
-        self.total_commands = self.exptTreeWidget.topLevelItemCount()
+        # Get current command
+        curr_item = self.exptTreeWidget.topLevelItem(index)
 
-        # If TreeWidget is empty show error messagebox
-        if self.total_commands == 0:
-            msg_text = 'No commands selected in \'Experiment\' tab!'
-            self.show_dialog(msg_text)
-        else:
-            # Run first command in the list
-            self.run_command()
-            # Disable start button
-            self.startExptBtn.setDisabled(True)
+        # Set current command to green
+        active_colour = QBrush(QColor("#00FF00"))
+        curr_item.setForeground(0, active_colour)
+        curr_item.setForeground(1, active_colour)
+        curr_item.setForeground(2, active_colour)
 
-    def run_command(self):
+        # Set previous command to black
+        if index != 0:
+            prev_item = self.exptTreeWidget.topLevelItem(index - 1)
 
-        def process_PPMS_command(com):
-
-            if 'Temperature' in com:
-                # Extract set value
-                value_str = com.split('\n')[0]
-                value = value_str.split(' ')[-1][:-2]
-
-                # Extract rate
-                rate_str = com.split('\n')[1]
-                rate = rate_str.split(' ')[1][:-4]
-
-                variable_type = 'T'
-
-            else:
-                # Extract set value
-                value_str = command.split('\n')[0]
-                value = value_str.split(' ')[-1][:-3]
-
-                # Extract rate
-                rate_str = command.split('\n')[1]
-                rate = rate_str.split(' ')[1][:-5]
-                # Define temp or field
-                variable_type = 'F'
-
-            return variable, value, rate
-
-        def run_NMR_sequence(reg_vals, num_reps, data_filepath, seq_names):
-            """
-            Runs an NMR sequence in a separate thread.
-            """
-            # Create QThread object
-            self.thread = QThread()
-            # Create Worker instance for spectrometer
-            self.worker = SpecMRWorker(self.spectrometer, reg_vals, num_reps, data_filepath, seq_names)
-            # Move worker to thread
-            self.worker.moveToThread(self.thread)
-            # Connect signals and slots
-            self.thread.started.connect(self.worker.run_expt)
-            self.worker.finished.connect(self.thread.quit)
-            self.worker.finished.connect(self.worker.deleteLater)
-            self.worker.data_out.connect(self.plot_data)
-            self.thread.destroyed.connect(self.run_command)
-            self.worker.expt_info.connect(self.update_expt_labels)
-            self.thread.finished.connect(self.thread.deleteLater)
-            # Start thread
-            self.thread.start()
-
-        def run_PPMS_command(parameter, value, rate):
-            """
-            Runs a PPMS command in a separate thread.
-            """
-
-            # Create QThread object
-            self.thread = QThread()
-            # Create Worker instance for PPMS
-            self.worker = PPMSWorker(parameter, value, rate)
-            # Move worker to thread
-            self.worker.moveToThread(self.thread)
-
-            # Connect signals and slots
-            self.thread.started.connect(self.worker.set_value)
-            self.worker.finished.connect(self.thread.quit)
-            self.worker.finished.connect(self.worker.deleteLater)
-            self.worker.command_info.connect(self.update_expt_labels)
-            self.worker.parameters.connect(self.update_live_PPMS_plot)
-            self.thread.destroyed.connect(self.run_command)
-            self.thread.finished.connect(self.thread.deleteLater)
-
-            # Start thread
-            self.thread.start()
-
-        def change_item_colour(it, col):
-
-            it.setForeground(0, col)
-            it.setForeground(1, col)
-            it.setForeground(2, col)
-
-
-        print(f'Current command: {self.current_command}')
-
-        # Change previous command to black
-        if self.current_command != 0:
-            prev_item = self.exptTreeWidget.topLevelItem(self.current_command-1)
-            change_item_colour(prev_item, QBrush(QColor('#000000')))
-
-        if self.current_command < self.total_commands:
-
-            # Get current command
-            item = self.exptTreeWidget.topLevelItem(self.current_command)
-            # Change current command to green
-            change_item_colour(item, QBrush(QColor('#00FF00')))
-            # Get command type
-            command_type = item.text(0)
-            # Increment current command counter
-            self.current_command += 1
-
-            if self.spectrometer:
-                # Check if command is NMR or PPMS
-                if command_type == 'NMR':
-                    # Get sequence name and repeats
-                    seq_name = item.text(1)
-                    repeats = item.text(2)
-
-                    # Make output data file
-                    self.create_data_file(seq_name, int(repeats))
-
-                    # Generate output data filepaths
-                    data_filepath = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name
-
-                    # Read sequence from file
-                    sequence_vals = np.loadtxt(self.default_seq_filepath + seq_name + '.seq', dtype=int)
-                    # Delete phase since it is not implemented yet
-                    sequence_vals = np.delete(sequence_vals, 1)
-
-                    # Construct tuples of (Register, value) pairs
-                    register_values = np.empty(sequence_vals.size, dtype=object)
-                    for j, t in enumerate(zip(self.registers, sequence_vals)):
-                        register_values[j] = (t[0], t[1])
-
-                    run_NMR_sequence(register_values, repeats, data_filepath, seq_name)
-
-                else:
-                    # Extract command
-                    command = item.text(1)
-                    # Process PPMS command
-                    variable, value, rate = process_PPMS_command(command)
-                    # Run command
-                    run_PPMS_command(variable, value, rate)
-            else:
-                # Wait 2 seconds
-                QtCore.QTimer.singleShot(2000, lambda: self.run_command())
-
-        else:
-            print('Main Thread: Experiment finished!')
-            self.reset_expt_tab()
+            inactive_colour = QBrush(QColor("#000000"))
+            prev_item.setForeground(0, inactive_colour)
+            prev_item.setForeground(1, inactive_colour)
+            prev_item.setForeground(2, inactive_colour)
 
     def update_live_PPMS_plot(self, t, temp):
         print(f'{t}s')
