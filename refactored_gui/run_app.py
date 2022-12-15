@@ -51,8 +51,8 @@ class RunApp(Ui_MainWindow):
         self.default_data_filepath = 'data\\'
 
         # Initialise manager for experiment
-        self.expt_manager = ExperimentManager(self.spectrometer, self.PPMS)
-        self.expt_manager.active_command.connect(self.change_treewidget_item_colour)
+        self.expt_manager = ExperimentManager()
+        #self.expt_manager.active_command.connect(self.change_treewidget_item_colour)
 
         # Initialise data file cache
         self.data_file_cache = []
