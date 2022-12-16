@@ -8,6 +8,8 @@ from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 class ExperimentManager(QObject):
 
+    run_NMR_command = pyqtSignal(object)
+
     def __init__(self):
         super().__init__()
         self.command_list = CommandList()
@@ -15,6 +17,9 @@ class ExperimentManager(QObject):
         # Make instrument threads
         self.NMR_thread, self.NMR_worker = self.create_NMR_thread()
         self.PPMS_thread, self.PPMS_worker = self.create_PPMS_thread()
+        print(f"NMR thread = {self.NMR_thread}, worker = {self.NMR_worker}")
+        print(f"PPMS thread = {self.PPMS_thread}, worker = {self.PPMS_worker}")
+        self.run_test_command()
 
     def create_NMR_thread(self):
         thread = QThread()
@@ -25,10 +30,13 @@ class ExperimentManager(QObject):
         worker.moveToThread(thread)
         # Connect signals and slots
         worker.finished.connect(thread.quit)
+        self.run_NMR_command.connect(worker.run_command)
         # worker.finished.connect(worker.deleteLater)
         # thread.finished.connect(thread.deleteLater)
         # Start thread
         thread.start()
+
+
 
         return thread, worker
 
@@ -47,6 +55,10 @@ class ExperimentManager(QObject):
         thread.start()
 
         return thread, worker
+
+    def run_test_command(self):
+        command = NMRCommand(r"M:\Research\NEW FPGA development\NMR spectrometer GUI\refactored_gui\test.seq", 8)
+        self.run_NMR_command.emit(command)
 
     def run_experiment(self) -> None:
 
@@ -109,13 +121,8 @@ class ExperimentManager(QObject):
 
         self.command_counter += 1
 
-
-
-    def test_threads(self):
-        self.test_thread.start()
-
-    def thread_tester_finished(self, parameter):
-        print(f"Main thread: Operation with parameter = {parameter} finished!")
+    def thread_tester_finished(self, command):
+        print(f"[Main thread] Operation with command = {command} finished!")
 
 
 class CommandList(QObject):
@@ -125,15 +132,6 @@ class CommandList(QObject):
     def __init__(self) -> None:
         super().__init__()
         self.command_list = []
-
-        """# Make new thread and object
-        self.test_thread = QThread()
-        self.worker = ThreadTester()
-        # Move worker to thread
-        self.worker.moveToThread(self.test_thread)
-        self.test_thread.started.connect(self.worker.test_method)
-        self.worker.finished.connect(self.thread_tester_finished)
-        self.test_threads()"""
 
     def delete_command(self, index: int) -> None:
         """
