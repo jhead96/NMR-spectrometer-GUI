@@ -1,4 +1,4 @@
-from gui_9 import *
+from gui_mplwidgets_9 import *
 from run_PPMS_command_window import *
 
 import sys
@@ -20,7 +20,8 @@ from data_handling.command import NMRCommand, PPMSFieldCommand, PPMSTemperatureC
 
 # Experiment management
 from refactored_gui.experiment_manager.experiment_manager import ExperimentManager
-
+# Plot management
+from refactored_gui.plot_manager.plot_manager import MPLPlotManager
 
 class RunApp(Ui_MainWindow):
     """
@@ -34,11 +35,6 @@ class RunApp(Ui_MainWindow):
         self.dialog = QtWidgets.QInputDialog()
         self.connect_button_functions()
 
-        # Setup graph widgets
-        self.initialise_plot_widgets()
-        self.time_plot_line = {"Channel A": None, "Channel B": None}
-        self.frq_plot_line = {"Channel A": None, "Channel B": None}
-
         # Initialise active sample
         self.active_sample = None
 
@@ -46,13 +42,26 @@ class RunApp(Ui_MainWindow):
         self.spectrometer = SDR14()
         self.PPMS = PPMS()
 
+        # Initialise plot manager
+        canvs = {'time': self.timePlotWidget.canvas, 'fft': self.frqPlotWidget.canvas}
+        ax_refs = {'time': self.timePlotWidget.canvas.ax, 'fft': self.frqPlotWidget.canvas.ax}
+        self.plot_manager = MPLPlotManager(ax_refs, canvs)
+        #self.initialise_plot_widgets()
+        #self.time_plot_line = {"Channel A": None, "Channel B": None}
+        #self.frq_plot_line = {"Channel A": None, "Channel B": None}
+
+        # Initialise experiment manager
+        self.expt_manager = ExperimentManager()
+
+        # Signals from expt manager
+        self.expt_manager.current_repeat.connect(self.update_expt_labels)
+        self.expt_manager.curr_command.connect(self.change_treewidget_item_colour)
+        self.expt_manager.experiment_finished.connect(self.reset_expt_tab)
+        self.expt_manager.NMR_data.connect(self.update_plots)
+
         # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
         self.default_data_filepath = 'data\\'
-
-        # Initialise manager for experiment
-        self.expt_manager = ExperimentManager()
-        #self.expt_manager.active_command.connect(self.change_treewidget_item_colour)
 
         # Initialise data file cache
         self.data_file_cache = []
@@ -240,9 +249,10 @@ class RunApp(Ui_MainWindow):
         # Clear treewidget
         self.exptTreeWidget.clear()
 
-        print(self.expt_manager.command_list)
+        command_list = self.expt_manager.command_list.get_command_list()
+        print(command_list)
         # Repopulate treewidget
-        for com in self.expt_manager.command_list:
+        for com in command_list:
             # If command is NMRCommand
             if isinstance(com, NMRCommand):
                 item = QtWidgets.QTreeWidgetItem(self.exptTreeWidget, [com.command_type, com.sequence_filepath, str(com.repeats)])
@@ -272,7 +282,7 @@ class RunApp(Ui_MainWindow):
 
             if command.valid_command:
                 # Add command to manager
-                self.expt_manager.add_command(command)
+                self.expt_manager.command_list.add_command(command)
                 self.update_experiment_treewidget()
 
             else:
@@ -299,7 +309,7 @@ class RunApp(Ui_MainWindow):
             else:
                 new_command = PPMSFieldCommand(value, rate)
 
-            self.expt_manager.add_command(new_command)
+            self.expt_manager.command_list.add_command(new_command)
             self.update_experiment_treewidget()
 
 
@@ -322,7 +332,7 @@ class RunApp(Ui_MainWindow):
             # Get index of selected node
             index = self.exptTreeWidget.indexFromItem(base_node).row()
             # Delete selected node
-            self.expt_manager.delete_command(index)
+            self.expt_manager.command_list.delete_command(index)
             # Refresh tree widget
             self.update_experiment_treewidget()
 
@@ -339,7 +349,7 @@ class RunApp(Ui_MainWindow):
             return
 
         item_index = self.exptTreeWidget.indexOfTopLevelItem(selected_item)
-        command_type = self.expt_manager.get_command_type(item_index)
+        command_type = self.expt_manager.command_list.get_command_type(item_index)
 
         value = None
         rate = None
@@ -350,7 +360,7 @@ class RunApp(Ui_MainWindow):
         if command_type is NMRCommand:
             repeats, valid = QtWidgets.QInputDialog.getInt(self.dialog, 'Repeats', 'Enter number of repeats', 1, 1)
             if valid:
-                self.expt_manager.edit_command(item_index, repeats=repeats)
+                self.expt_manager.command_list.edit_command(item_index, repeats=repeats)
 
         # If PPMSTemperatureCommand
         elif command_type is PPMSTemperatureCommand:
@@ -378,200 +388,56 @@ class RunApp(Ui_MainWindow):
         self.update_experiment_treewidget()
 
     def run_expt(self):
-
+        self.startExptBtn.setDisabled(True)
         self.expt_manager.start_experiment()
 
-    def change_treewidget_item_colour(self, index: int):
+    def change_treewidget_item_colour(self, index: int, reset: bool = False):
+
+
+        # Define brushes
+        brushes = {'active': QBrush(QColor("#00FF00")), 'inactive': QBrush(QColor("#000000"))}
 
         # Get current command
         curr_item = self.exptTreeWidget.topLevelItem(index)
 
+        # If reset change item to black
+        if reset:
+            curr_item.setForeground(0, brushes['inactive'])
+            curr_item.setForeground(1, brushes['inactive'])
+            curr_item.setForeground(2, brushes['inactive'])
+            return
+
         # Set current command to green
-        active_colour = QBrush(QColor("#00FF00"))
-        curr_item.setForeground(0, active_colour)
-        curr_item.setForeground(1, active_colour)
-        curr_item.setForeground(2, active_colour)
+        curr_item.setForeground(0, brushes['active'])
+        curr_item.setForeground(1, brushes['active'])
+        curr_item.setForeground(2, brushes['active'])
 
         # Set previous command to black
         if index != 0:
             prev_item = self.exptTreeWidget.topLevelItem(index - 1)
 
-            inactive_colour = QBrush(QColor("#000000"))
-            prev_item.setForeground(0, inactive_colour)
-            prev_item.setForeground(1, inactive_colour)
-            prev_item.setForeground(2, inactive_colour)
 
-    def update_live_PPMS_plot(self, t, temp):
-        print(f'{t}s')
-        print(f'Temp = {temp}K')
+            prev_item.setForeground(0, brushes['inactive'])
+            prev_item.setForeground(1, brushes['inactive'])
+            prev_item.setForeground(2, brushes['inactive'])
 
-        self.t_data.append(t)
-        self.temp_data.append(temp)
+    def update_plots(self, ch1_data: np.ndarray, ch2_data: np.ndarray):
+        self.plot_manager.update_plots(ch1_data, 'chA')
+        self.plot_manager.update_plots(ch2_data, 'chB')
 
-        self.livePPMSPlotWidget.canvas.ax.plot(self.t_data, self.temp_data, 'r.-')
-        self.livePPMSPlotWidget.canvas.draw()
-
-    def select_live_sequence(self):
-        # Open file dialog
-        load_filepath = QtWidgets.QFileDialog.getOpenFileName(None, "Open sequence", self.default_seq_filepath)
-        # Read file name of sequence
-        load_filename = load_filepath[0].split('/')[-1]
-        # Set loaded file textbox
-        self.livePlotSelectedSeqLineEdit.setText(load_filename)
-
-    def start_live_plot(self):
+    def reset_expt_tab(self, last_index):
         """
-        Starts live plotting.
-        """
-
-        if self.livePlotSelectedSeqLineEdit.text() == "":
-            self.select_live_sequence()
-
-        seq_path = self.default_seq_filepath + self.livePlotSelectedSeqLineEdit.text()
-        data = np.loadtxt(seq_path)
-        data = np.delete(data, 1)
-
-        # Regs to update
-        regs_to_update = np.array([1, 2, 3, 5, 7])
-        reg_vals = np.empty(regs_to_update.size, dtype=tuple)
-
-        for index, reg in enumerate(regs_to_update):
-            pair = (reg, int(data[index]))
-            reg_vals[index] = pair
-
-        # Set fixed register values for now
-        # reg_vals2 = np.array([(1, int(10e6)), (2, int(1e4)), (3, int(2e4)), (5, int(1e4)), (7, int(5e4))])
-
-        # Setup new thread for continuous acquisition
-        self.liveThread = QThread()
-        self.liveWorker = SpecLiveWorker(self.spectrometer, reg_vals)
-        self.liveWorker.moveToThread(self.liveThread)
-
-        self.liveThread.started.connect(self.liveWorker.continuous_acquisition)
-        self.liveThread.finished.connect(self.liveThread.deleteLater)
-
-        self.liveWorker.data_out.connect(self.fetch_live_plot_data)
-        self.liveWorker.finished.connect(self.liveThread.quit)
-        self.liveWorker.finished.connect(self.liveWorker.deleteLater)
-
-        # Start thread
-        self.liveThread.start()
-
-        # Disable live button
-        self.startLivePlot.setEnabled(False)
-        # Enable live button on thread finish
-        self.liveThread.finished.connect(lambda: self.startLivePlot.setEnabled(True))
-
-        # Start timer for plots
-        self.update_timer.start(500)
-
-    def end_live_plot(self):
-        """
-        Ends live plotting from SDR14.
-        :return:
-        """
-
-        self.liveWorker.stop_acquisition()
-        self.update_timer.stop()
-
-    def fetch_live_plot_data(self, ch1_data, ch2_data):
-        """
-        :param ch1_data: Data from SDR14 ch1 emitted from worker thread.
-        :param ch2_data: Data from SDR14 ch2 emitted from worker thread.
-        :return:
-        """
-
-        # Assign data from SDR14 worker thread to class variables
-        self.ch1_data = ch1_data
-        self.ch2_data = ch2_data
-
-        # Add to accumulator variable
-
-    def update_live_plot_on_timeout(self):
-        """
-        Updates time and frequency live tab plots incoming data from SDR14 on QTimer timeout.
-        """
-
-        def plot_time_data(x, ch1_data, ch2_data):
-
-            if (self.time_plot_line["Channel A"] is None) and (self.time_plot_line["Channel B"] is None):
-                # If plots are blank, generate plot references
-                plot_refs = self.liveTimePlotWidget.canvas.ax.plot(x, ch1_data, x, ch2_data)
-
-                self.time_plot_line["Channel A"] = plot_refs[0]
-                self.time_plot_line["Channel A"].set_label('CH A')
-
-                self.time_plot_line["Channel B"] = plot_refs[1]
-                self.time_plot_line["Channel B"].set_label('CH B')
-                self.liveTimePlotWidget.canvas.ax.legend(loc='upper right')
-
-            else:
-                # Update plot references
-                self.time_plot_line["Channel A"].set_ydata(ch1_data)
-                self.time_plot_line["Channel B"].set_ydata(ch2_data)
-
-            self.liveTimePlotWidget.canvas.draw()
-
-        def plot_frq_data(xf, ch1_FFT, ch2_FFT):
-
-            N = ch1_FFT.size
-            ind = int(N/2)
-            y1 = np.abs(ch1_FFT[0:ind:10])
-            y2 = np.abs(ch2_FFT[0:ind:10])
-
-            ind = int(N/2)
-
-            if (self.frq_plot_line["Channel A"] is None) and (self.frq_plot_line["Channel B"] is None):
-
-                x = xf[0:ind:10]
-                # If plots are blank, generate plot references
-                plot_refs = self.liveFrqPlotWidget.canvas.ax.plot(x, y1, x, y2)
-
-                self.frq_plot_line["Channel A"] = plot_refs[0]
-                self.frq_plot_line["Channel A"].set_label('CH A')
-
-                self.frq_plot_line["Channel B"] = plot_refs[1]
-                self.frq_plot_line["Channel B"].set_label('CH B')
-                self.liveFrqPlotWidget.canvas.ax.legend(loc='upper right')
-            else:
-                # Update plot references
-                self.frq_plot_line["Channel A"].set_ydata(y1)
-                self.frq_plot_line["Channel B"].set_ydata(y2)
-
-            self.liveFrqPlotWidget.canvas.draw()
-
-        def fourier_transform(data, fs):
-            Ts = 1 / fs
-            N = data.size
-            data_FFT = scipy.fft.fft(data)
-            xf = scipy.fft.fftfreq(N, d=Ts)
-
-            return xf, data_FFT
-
-        N = 1000
-        x = np.arange(0, N)
-
-        # Plot time data
-        plot_time_data(x, self.ch1_data[0:N], self.ch2_data[0:N])
-        # Calculate FFT of incoming data
-        ch1_xf, ch1_FFT = fourier_transform(self.ch1_data, fs=800e6)
-        ch2_xf, ch2_FFT = fourier_transform(self.ch2_data, fs=800e6)
-        # Plot frq data
-        plot_frq_data(ch1_xf, ch1_FFT, ch2_FFT)
-
-    def reset_expt_tab(self):
-        """
-        Resets the 'Experiment' tab layout after an experiment is finished.
+        Resets the main tab after an experiment is finished.
         """
 
         self.startExptBtn.setDisabled(False)
+        self.change_treewidget_item_colour(last_index, reset=True)
 
-    def update_expt_labels(self, seq_name, repeat='--'):
+    def update_expt_labels(self, repeat='--'):
         """
-        Updates the 'Experiment' tab labels during the experiment.
+        Updates the 'repeat' label during an experiment.
         """
-        #self.currentSeqLbl.setText('Current Sequence: {seq_name}'.format(seq_name))
-        self.currentRepeatLbl.setText(f'Current Repeat: {repeat}')
+        self.repeatValLbl.setText(f"{repeat}")
 
     def create_data_directory(self):
         """
