@@ -1,4 +1,4 @@
-from gui_mplwidgets_9 import *
+from gui_pyqtgraph_9 import *
 from run_PPMS_command_window import *
 
 import sys
@@ -21,7 +21,7 @@ from data_handling.command import NMRCommand, PPMSFieldCommand, PPMSTemperatureC
 # Experiment management
 from refactored_gui.experiment_manager.experiment_manager import ExperimentManager
 # Plot management
-from refactored_gui.plot_manager.plot_manager import MPLPlotManager
+from refactored_gui.plot_manager.plot_managers import PyqtgraphPlotManager
 
 class RunApp(Ui_MainWindow):
     """
@@ -43,12 +43,8 @@ class RunApp(Ui_MainWindow):
         self.PPMS = PPMS()
 
         # Initialise plot manager
-        canvs = {'time': self.timePlotWidget.canvas, 'fft': self.frqPlotWidget.canvas}
-        ax_refs = {'time': self.timePlotWidget.canvas.ax, 'fft': self.frqPlotWidget.canvas.ax}
-        self.plot_manager = MPLPlotManager(ax_refs, canvs)
-        #self.initialise_plot_widgets()
-        #self.time_plot_line = {"Channel A": None, "Channel B": None}
-        #self.frq_plot_line = {"Channel A": None, "Channel B": None}
+        plot_widgets = {'time': self.timePlotWidget, 'fft': self.frqPlotWidget}
+        self.plot_manager = PyqtgraphPlotManager(plot_widgets)
 
         # Initialise experiment manager
         self.expt_manager = ExperimentManager()
@@ -57,7 +53,7 @@ class RunApp(Ui_MainWindow):
         self.expt_manager.current_repeat.connect(self.update_expt_labels)
         self.expt_manager.curr_command.connect(self.change_treewidget_item_colour)
         self.expt_manager.experiment_finished.connect(self.reset_expt_tab)
-        self.expt_manager.NMR_data.connect(self.update_plots)
+        self.expt_manager.NMR_data.connect(self.update_plot)
 
         # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
@@ -421,9 +417,9 @@ class RunApp(Ui_MainWindow):
             prev_item.setForeground(1, brushes['inactive'])
             prev_item.setForeground(2, brushes['inactive'])
 
-    def update_plots(self, ch1_data: np.ndarray, ch2_data: np.ndarray):
-        self.plot_manager.update_plots(ch1_data, 'chA')
-        self.plot_manager.update_plots(ch2_data, 'chB')
+    def update_plot(self, ch1_data: np.ndarray, ch2_data: np.ndarray):
+        self.plot_manager.update_plot(ch1_data, 'ch1')
+        self.plot_manager.update_plot(ch2_data, 'ch2')
 
     def reset_expt_tab(self, last_index):
         """

@@ -28,7 +28,7 @@ class SpectrometerController(QObject):
             ch2_data = self.generate_test_data()
             self.data_out.emit(ch1_data, ch2_data)
 
-            time.sleep(1)
+            time.sleep(0.2)
 
         print("[NMR Thread] Dummy code finished")
         self.finished.emit()
@@ -47,7 +47,8 @@ class SpectrometerController(QObject):
 
     @staticmethod
     def generate_test_data():
-        return np.random.random(10000)
+        l = 65536
+        return np.random.random(l)
 
 class PPMSController(QObject):
 

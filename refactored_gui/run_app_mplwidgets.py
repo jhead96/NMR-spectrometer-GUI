@@ -21,7 +21,7 @@ from data_handling.command import NMRCommand, PPMSFieldCommand, PPMSTemperatureC
 # Experiment management
 from refactored_gui.experiment_manager.experiment_manager import ExperimentManager
 # Plot management
-from refactored_gui.plot_manager.plot_manager import MPLPlotManager
+from refactored_gui.plot_manager.plot_managers import MPLPlotManager
 
 class RunApp(Ui_MainWindow):
     """
