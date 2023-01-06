@@ -84,13 +84,13 @@ class PPMSCommand:
         Generates a new command label. Needs to be called if any instance variables are changed.
         :return:
         """
-        self.command_lbl = f"Set {self.variable_type}={self.set_value}{self.unit} at {self.rate}{self.unit}/s"
+        self.command_lbl = f"Set {self.variable_type}={self.set_value}{self.unit}\nRate={self.rate}{self.unit}/s"
 
 
 @dataclass
 class PPMSTemperatureCommand(PPMSCommand):
 
-    command_type: str = "PPMS - Temperature"
+    command_type: str = "PPMS-Temp"
     unit: str = "K"
     variable_type: str = "T"
     value_limits: list[int] = field(default_factory=lambda: [2, 400])
@@ -100,7 +100,7 @@ class PPMSTemperatureCommand(PPMSCommand):
 @dataclass
 class PPMSFieldCommand(PPMSCommand):
 
-    command_type: str = "PPMS - Magnetic field"
+    command_type: str = "PPMS-Field"
     unit: str = "Oe"
     variable_type: str = "B"
     value_limits: list[int] = field(default_factory=lambda: [-70000, 70000])

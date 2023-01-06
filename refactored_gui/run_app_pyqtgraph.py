@@ -376,9 +376,9 @@ class RunApp(Ui_MainWindow):
 
         # Set PPMSCommand parameters
         if value_valid:
-            self.expt_manager.edit_command(item_index, value=value)
+            self.expt_manager.command_list.edit_command(item_index, value=value)
         if rate_valid:
-            self.expt_manager.edit_command(item_index, rate=rate)
+            self.expt_manager.command_list.edit_command(item_index, rate=rate)
 
         # Update treewidget
         self.update_experiment_treewidget()
