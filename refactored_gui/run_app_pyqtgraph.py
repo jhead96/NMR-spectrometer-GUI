@@ -1,4 +1,4 @@
-from gui_pyqtgraph_9 import *
+from gui_pyqtgraph_10 import *
 from run_PPMS_command_window import *
 
 import sys
