@@ -58,6 +58,13 @@
                  <number>0</number>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_4">
+                 <item row="1" column="3">
+                  <widget class="QLineEdit" name="currentDataDirLineEdit">
+                   <property name="readOnly">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
                  <item row="1" column="2">
                   <widget class="QLabel" name="currentDataDir">
                    <property name="sizePolicy">
@@ -119,15 +126,15 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="3">
-                  <widget class="QLineEdit" name="currentDataDirLineEdit">
-                   <property name="readOnly">
-                    <bool>true</bool>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="0" column="1">
                   <widget class="QLineEdit" name="currentUserLineEdit"/>
+                 </item>
+                 <item row="1" column="4">
+                  <widget class="QPushButton" name="saveDirBtn">
+                   <property name="text">
+                    <string>Browse</string>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </widget>
@@ -248,10 +255,10 @@
                 </property>
                 <layout class="QHBoxLayout" name="horizontalLayout_2">
                  <item>
-                  <widget class="PlotWidget" name="timePlotWidget" native="true"/>
+                  <widget class="PlotWidget" name="averageTimePlotWidget" native="true"/>
                  </item>
                  <item>
-                  <widget class="PlotWidget" name="frqPlotWidget" native="true"/>
+                  <widget class="PlotWidget" name="lastTimePlotWidget" native="true"/>
                  </item>
                 </layout>
                </widget>
