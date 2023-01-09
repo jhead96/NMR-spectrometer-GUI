@@ -427,6 +427,11 @@ class RunApp(Ui_MainWindow):
         """
 
         self.startExptBtn.setDisabled(False)
+
+        if last_index == -1:
+            self.show_dialog("No commands in experiment!")
+            return
+
         self.change_treewidget_item_colour(last_index, reset=True)
 
     def update_expt_labels(self, repeat='--'):
@@ -601,14 +606,15 @@ class RunApp(Ui_MainWindow):
             self.show_dialog("No filepath selected!")
             return ""
 
+    def shutdown_app(self):
+        self.expt_manager.close_threads()
 
 def close_GUI():
     """
     Disconnects devices from the PC as the GUI is closed.
     """
     # Remove connection to SDR-14 if connected
-    if ui.spectrometer is not None:
-        ui.spectrometer.delete_control_unit()
+    ui.shutdown_app()
 
 
 app = QtWidgets.QApplication(sys.argv)

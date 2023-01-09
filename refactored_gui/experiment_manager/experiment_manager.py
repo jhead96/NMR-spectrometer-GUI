@@ -13,13 +13,13 @@ class ExperimentManager(QObject):
     run_NMR_command = pyqtSignal(object)
     current_repeat = pyqtSignal(int)
     NMR_data = pyqtSignal(object, object)
+    close_NMR_thread = pyqtSignal()
     # PPMS signals
     run_PPMS_command = pyqtSignal(object)
+    close_PPMS_thread = pyqtSignal()
     # Progress signals
     curr_command = pyqtSignal(int)
     experiment_finished = pyqtSignal(int)
-
-
 
     def __init__(self):
         super().__init__()
@@ -41,6 +41,7 @@ class ExperimentManager(QObject):
         worker.data_out.connect(self.emit_NMR_data_to_gui)
         # Connect slots
         self.run_NMR_command.connect(worker.run_command)
+        self.close_NMR_thread.connect(worker.close_thread)
         # Start thread
         thread.start()
 
@@ -55,6 +56,7 @@ class ExperimentManager(QObject):
         worker.finished.connect(self.next_command)
         # Connect slots
         self.run_PPMS_command.connect(worker.run_command)
+        self.close_PPMS_thread.connect(worker.close_thread)
         # Start thread
         thread.start()
 
@@ -64,6 +66,7 @@ class ExperimentManager(QObject):
 
         if not self.command_list.get_command_list():
             print("No commands in command list")
+            self.experiment_finished.emit(-1)
             return
 
         self.run_command()
@@ -95,7 +98,9 @@ class ExperimentManager(QObject):
     def emit_NMR_data_to_gui(self, ch1_data: np.ndarray, ch2_data: np.ndarray) -> None:
         self.NMR_data.emit(ch1_data, ch2_data)
 
-
+    def close_threads(self):
+        self.close_NMR_thread.emit()
+        self.close_PPMS_thread.emit()
 
 class CommandList(QObject):
 

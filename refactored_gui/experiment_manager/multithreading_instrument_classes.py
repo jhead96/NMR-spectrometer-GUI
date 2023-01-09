@@ -35,7 +35,6 @@ class SpectrometerController(QObject):
 
     def prepare_device(self, sequence) -> None:
 
-
         # Write command to SDR14 registers
         for key, value in sequence.convert_to_dict().items():
             if key == "name":
@@ -44,6 +43,10 @@ class SpectrometerController(QObject):
                 print(f"Writing {key} with mask != 0, value = {value}")
             else:
                 print(f"Writing {key} with mask = 0, value = {value}")
+
+    @pyqtSlot()
+    def close_thread(self):
+        print("[NMR Thread] Disconnecting SDR14")
 
     @staticmethod
     def generate_test_data():
@@ -67,3 +70,6 @@ class PPMSController(QObject):
         print("[PPMS Thread] Dummy code finished")
         self.finished.emit()
 
+    @pyqtSlot()
+    def close_thread(self):
+        print("[PPMS Thread] Disconnecting PPMS")
