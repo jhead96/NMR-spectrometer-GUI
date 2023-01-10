@@ -1,4 +1,4 @@
-from gui_pyqtgraph_10 import *
+from gui_pyqtgraph_11 import *
 from run_PPMS_command_window import *
 
 import sys
@@ -43,7 +43,7 @@ class RunApp(Ui_MainWindow):
         self.PPMS = PPMS()
 
         # Initialise plot manager
-        plot_widgets = {'time': self.timePlotWidget, 'fft': self.frqPlotWidget}
+        plot_widgets = {'average_time': self.averageTimePlotWidget, 'last_time': self.lastTimePlotWidget}
         self.plot_manager = PyqtgraphPlotManager(plot_widgets)
 
         # Initialise experiment manager
