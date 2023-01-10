@@ -7,12 +7,13 @@ from typing import Union
 from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
+# noinspection PyUnresolvedReferences
 class ExperimentManager(QObject):
 
     # NMR signals
     run_NMR_command = pyqtSignal(object)
     current_repeat = pyqtSignal(int)
-    NMR_data = pyqtSignal(object, object)
+    NMR_data = pyqtSignal(object, object, object, object)
     close_NMR_thread = pyqtSignal()
     # PPMS signals
     run_PPMS_command = pyqtSignal(object)
@@ -26,6 +27,8 @@ class ExperimentManager(QObject):
         # Initialize variables
         self.command_list = CommandList()
         self.active_command = 0
+        self.ch1_accumulator = None
+        self.ch2_accumulator = None
         # Make instrument threads
         self.NMR_thread, self.NMR_worker = self.create_NMR_thread()
         self.PPMS_thread, self.PPMS_worker = self.create_PPMS_thread()
@@ -68,7 +71,7 @@ class ExperimentManager(QObject):
             print("No commands in command list")
             self.experiment_finished.emit(-1)
             return
-
+        self.generate_output_file()
         self.run_command()
 
     def run_command(self) -> None:
@@ -77,6 +80,8 @@ class ExperimentManager(QObject):
         if self.active_command == len(self.command_list.get_command_list()):
             self.experiment_finished.emit(self.active_command-1)
             self.active_command = 0
+            self.ch1_accumulator = None
+            self.ch2_accumulator = None
             print("Experiment finished!")
             return
 
@@ -95,8 +100,28 @@ class ExperimentManager(QObject):
     def emit_repeat_to_gui(self, repeat: int) -> None:
         self.current_repeat.emit(repeat)
 
-    def emit_NMR_data_to_gui(self, ch1_data: np.ndarray, ch2_data: np.ndarray) -> None:
-        self.NMR_data.emit(ch1_data, ch2_data)
+    def emit_NMR_data_to_gui(self, rep: int, ch1_data: np.ndarray, ch2_data: np.ndarray) -> None:
+
+        if self.ch1_accumulator is None:
+            self.ch1_accumulator = np.zeros(ch1_data.size)
+            self.ch2_accumulator = np.zeros(ch2_data.size)
+
+        # Average data
+        self.ch1_accumulator += ch1_data
+        self.ch2_accumulator += ch2_data
+
+        ch1_average = self.ch1_accumulator / rep
+        ch2_average = self.ch2_accumulator / rep
+
+        # Save data
+        self.save_data_to_file(ch1_data, ch2_data)
+        # Send data to plotting
+        self.NMR_data.emit(ch1_data, ch2_data, ch1_average, ch2_average)
+
+    def generate_output_file(self):
+
+
+    def save_data_to_file(self, ch1_data, ch2_data):
 
     def close_threads(self):
         self.close_NMR_thread.emit()

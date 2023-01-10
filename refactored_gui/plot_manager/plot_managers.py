@@ -45,27 +45,29 @@ class MPLPlotManager:
 # noinspection PyTypeChecker
 class PyqtgraphPlotManager:
 
-    def __init__(self, plot_widgets: dict[pg.PlotWidget]) -> None:
-        self.plot_widgets = plot_widgets
+    def __init__(self, plot_widgets: dict) -> None:
+
+        self.plots = {k: {'plot_ref': plot_widgets[k],
+                          'lines': self.initialise_lines(k, plot_widgets)} for k in plot_widgets.keys()}
+
         self.initialise_plot_widgets()
-        self.lines = self.initialise_lines()
 
     def initialise_plot_widgets(self) -> None:
 
         styles = {'color': "#000000", 'font-size': "14px"}
 
-        for k in self.plot_widgets.keys():
-            self.plot_widgets[k].setBackground("w")
-            self.plot_widgets[k].setLabel("left", "signal", **styles)
-            self.plot_widgets[k].setLabel("bottom", "t (s)", **styles)
+        for k in self.plots.keys():
+            self.plots[k]['plot_ref'].setBackground("w")
+            self.plots[k]['plot_ref'].setLabel("left", "signal", **styles)
+            self.plots[k]['plot_ref'].setLabel("bottom", "t (s)", **styles)
 
-        self.plot_widgets['average_time'].setTitle("Averaged SDR14 signal", color='k')
-        self.plot_widgets['last_time'].setTitle("Last scan SDR14 signal", color='k')
+        self.plots['average_time']['plot_ref'].setTitle("Averaged SDR14 signal", color='k')
+        self.plots['last_time']['plot_ref'].setTitle("Last scan SDR14 signal", color='k')
 
+    def initialise_lines(self, key: str, plot_widgets: dict) -> dict[pg.PlotItem]:
 
-    def initialise_lines(self) -> dict[pg.PlotItem]:
-        return {'ch1': self.plot_widgets['average_time'].plot([], [], pen='r'),
-                'ch2': self.plot_widgets['average_time'].plot([], [], pen='b')}
+        return {'ch1': plot_widgets[key].plot([], [], pen='r'),
+                'ch2': plot_widgets[key].plot([], [], pen='b')}
 
-    def update_plot(self, data: np.ndarray, channel: str) -> None:
-        self.lines[channel].setData(data)
+    def update_plot(self, data: np.ndarray, plot: str, channel: str) -> None:
+        self.plots[plot]['lines'][channel].setData(data)

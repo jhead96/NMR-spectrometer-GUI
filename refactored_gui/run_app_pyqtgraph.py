@@ -417,9 +417,14 @@ class RunApp(Ui_MainWindow):
             prev_item.setForeground(1, brushes['inactive'])
             prev_item.setForeground(2, brushes['inactive'])
 
-    def update_plot(self, ch1_data: np.ndarray, ch2_data: np.ndarray):
-        self.plot_manager.update_plot(ch1_data, 'ch1')
-        self.plot_manager.update_plot(ch2_data, 'ch2')
+    def update_plot(self, ch1_data: np.ndarray, ch2_data: np.ndarray, ch1_average: np.ndarray, ch2_average: np.ndarray):
+
+        self.plot_manager.update_plot(ch1_data, 'last_time', 'ch1')
+        self.plot_manager.update_plot(ch2_data, 'last_time', 'ch2')
+
+        self.plot_manager.update_plot(ch1_average, 'average_time', 'ch1')
+        self.plot_manager.update_plot(ch2_average, 'average_time', 'ch2')
+
 
     def reset_expt_tab(self, last_index):
         """

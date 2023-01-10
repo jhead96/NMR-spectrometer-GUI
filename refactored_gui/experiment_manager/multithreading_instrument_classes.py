@@ -9,7 +9,7 @@ class SpectrometerController(QObject):
 
     finished = pyqtSignal()
     current_repeat = pyqtSignal(int)
-    data_out = pyqtSignal(object, object)
+    data_out = pyqtSignal(int, object, object)
 
     def __init__(self) -> None:
         super().__init__()
@@ -26,9 +26,9 @@ class SpectrometerController(QObject):
             print(f"[NMR Thread] Current scan = {i + 1} / {repeats}")
             ch1_data = self.generate_test_data()
             ch2_data = self.generate_test_data()
-            self.data_out.emit(ch1_data, ch2_data)
+            self.data_out.emit(i + 1, ch1_data, ch2_data)
 
-            time.sleep(0.2)
+            time.sleep(0.3)
 
         print("[NMR Thread] Dummy code finished")
         self.finished.emit()
