@@ -1,7 +1,8 @@
 import os
 import sys
 import ctypes as ct
-
+from dataclasses import dataclass
+from enum import Enum
 
 class SDR14:
 
@@ -11,17 +12,22 @@ class SDR14:
         # Get api
         self.api = self.retrieve_api()
 
-        # If api is found set-up device
-        if self.api:
-            self.cu = self.create_control_unit()
-            self.device_number = self.get_device_number()
+        # Handle no API found
+        if self.api is None:
+            return
 
-            # Set default return types
-            self.set_default_types()
+        self.cu = self.create_control_unit()
+        self.device_number = self.get_device_number()
 
-            # Initialise device registers
-            self.num_registers = 16
-            self.initialise_registers()
+        # Set default return types
+        self.set_default_types()
+
+        # Initialise device registers
+        self.num_registers = 16
+        self.initialise_registers()
+
+        # Initialise acquisition parameters
+        self.initial_parameters, self.acquisition_parameters = self.initialise_acquisition_parameters()
 
     def retrieve_api(self) -> ct.CDLL:
         """
@@ -98,6 +104,13 @@ class SDR14:
 
         print("All registers initialised to 0")
 
+    @staticmethod
+    def initialise_acquisition_parameters() -> tuple:
+        initial_parameters = [10, 1024 * 2, 4, 2, 0, 10000, 0, 0, 1, 65536]
+        acquisition_parameters = AcquisitionParameters(*initial_parameters)
+
+        return initial_parameters, acquisition_parameters
+
     def read_register(self, reg_number: int) -> bool:
         """
         Reads the specified register.
@@ -150,3 +163,41 @@ class SDR14:
         """
         self.write_register(0, 0)
 
+
+@dataclass()
+class AcquisitionParameters:
+    buffers: int
+    samples_per_buffer: int
+    sample_skip: int
+    bytes_per_sample: int
+    clock_source: int
+    total_nof_buffers: int
+    records_fetched: int
+    overflows: int
+    num_of_records: int
+    samples_per_record: int
+
+    def set_acquisition_parameters(self, buffers: int, samples_per_buffer: int, sample_skip: int,
+                                   bytes_per_sample: int, clock_source: int, total_nof_buffers: int,
+                                   records_fetched: int, overflows: int, num_of_records: int,
+                                   samples_per_record: int) -> None:
+        self.buffers = buffers
+        self.samples_per_buffer = samples_per_buffer
+        self.sample_skip = sample_skip
+        self.bytes_per_sample = bytes_per_sample
+        self.clock_source = clock_source
+        self.total_nof_buffers = total_nof_buffers
+        self.records_fetched = records_fetched
+        self.overflows = overflows
+        self.num_of_records = num_of_records
+        self.samples_per_record = samples_per_record
+
+
+class ClockEnum(Enum):
+    pass
+
+
+class TriggerMode(Enum):
+    pass
+
+x = SDR14()

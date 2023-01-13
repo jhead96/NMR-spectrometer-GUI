@@ -1,9 +1,9 @@
 import numpy as np
+import os
 from data_handling.command import NMRCommand, PPMSCommand
 from ..experiment_manager.sdr14_experiments import SDR14MultiRecordExperiment
 from ..experiment_manager.ppms_experiments import PPMSWorker
 from ..experiment_manager.multithreading_instrument_classes import SpectrometerController, PPMSController
-from typing import Union
 from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
@@ -14,9 +14,13 @@ class ExperimentManager(QObject):
     run_NMR_command = pyqtSignal(object)
     current_repeat = pyqtSignal(int)
     NMR_data = pyqtSignal(object, object, object, object)
+    set_NMR_output_path = pyqtSignal(str)
     close_NMR_thread = pyqtSignal()
     # PPMS signals
     run_PPMS_command = pyqtSignal(object)
+    set_PPMS_output_path = pyqtSignal(str)
+    get_PPMS_conditions = pyqtSignal()
+    PPMS_data_to_gui = pyqtSignal(float, float)
     close_PPMS_thread = pyqtSignal()
     # Progress signals
     curr_command = pyqtSignal(int)
@@ -24,9 +28,11 @@ class ExperimentManager(QObject):
 
     def __init__(self):
         super().__init__()
-        # Initialize variables
+        # Initialise variables
         self.command_list = CommandList()
         self.active_command = 0
+        self.output_directory = None
+        self.current_sample = None
         self.ch1_accumulator = None
         self.ch2_accumulator = None
         # Make instrument threads
@@ -44,6 +50,7 @@ class ExperimentManager(QObject):
         worker.data_out.connect(self.emit_NMR_data_to_gui)
         # Connect slots
         self.run_NMR_command.connect(worker.run_command)
+        self.set_NMR_output_path.connect(worker.set_save_dir)
         self.close_NMR_thread.connect(worker.close_thread)
         # Start thread
         thread.start()
@@ -57,8 +64,11 @@ class ExperimentManager(QObject):
         worker.moveToThread(thread)
         # Connect signals
         worker.finished.connect(self.next_command)
+        worker.PPMS_data_out.connect(self.emit_PPMS_data_to_gui)
         # Connect slots
         self.run_PPMS_command.connect(worker.run_command)
+        self.set_PPMS_output_path.connect(worker.set_save_dir)
+        self.get_PPMS_conditions.connect(worker.poll_PPMS)
         self.close_PPMS_thread.connect(worker.close_thread)
         # Start thread
         thread.start()
@@ -68,10 +78,16 @@ class ExperimentManager(QObject):
     def start_experiment(self) -> None:
 
         if not self.command_list.get_command_list():
-            print("No commands in command list")
+            print("No commands in command list!")
             self.experiment_finished.emit(-1)
             return
-        self.generate_output_file()
+
+        if not self.output_directory:
+            print("No output directory selected")
+            self.experiment_finished.emit(-2)
+            return
+
+        self.generate_output_directory()
         self.run_command()
 
     def run_command(self) -> None:
@@ -99,6 +115,8 @@ class ExperimentManager(QObject):
 
     def emit_repeat_to_gui(self, repeat: int) -> None:
         self.current_repeat.emit(repeat)
+        # Poll PPMS
+        self.get_PPMS_conditions.emit()
 
     def emit_NMR_data_to_gui(self, rep: int, ch1_data: np.ndarray, ch2_data: np.ndarray) -> None:
 
@@ -113,15 +131,45 @@ class ExperimentManager(QObject):
         ch1_average = self.ch1_accumulator / rep
         ch2_average = self.ch2_accumulator / rep
 
-        # Save data
-        self.save_data_to_file(ch1_data, ch2_data)
         # Send data to plotting
         self.NMR_data.emit(ch1_data, ch2_data, ch1_average, ch2_average)
 
-    def generate_output_file(self):
+    def emit_PPMS_data_to_gui(self, T: float, H: float) -> None:
+        self.PPMS_data_to_gui.emit(T, H)
 
+    def set_current_sample(self, sample) -> None:
+        self.current_sample = sample
 
-    def save_data_to_file(self, ch1_data, ch2_data):
+    def set_output_directory(self, directory: str) -> None:
+        self.output_directory = directory
+
+    def generate_output_directory(self) -> None:
+
+        if self.current_sample is None:
+            dir_name = "Unnamed sample"
+        else:
+            dir_name = self.current_sample.name
+
+        full_output_path = f"{self.output_directory}/{dir_name}"
+
+        # Make new dir and handle duplicate name
+        valid = False
+        while not valid:
+            try:
+                os.mkdir(full_output_path)
+            except FileExistsError as ex:
+                if "_" not in dir_name:
+                    dir_name += "_1"
+                else:
+                    temp_name, version = dir_name.split("_")
+                    dir_name = f"{temp_name}_{int(version) + 1}"
+                    full_output_path = f"{self.output_directory}/{dir_name}"
+            else:
+                valid = True
+
+        # Send output path to threads
+        self.set_NMR_output_path.emit(full_output_path)
+        self.set_PPMS_output_path.emit(full_output_path)
 
     def close_threads(self):
         self.close_NMR_thread.emit()

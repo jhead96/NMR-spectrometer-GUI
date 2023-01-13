@@ -25,8 +25,8 @@ class Sample:
             print(ex)
             self.valid_mass = 0
 
-        # Check for empty name
-        if self.name == "":
+        # Check for valid name
+        if (self.name == "") or ("_" in self.name):
             self.valid_name = 0
 
     def convert_to_dict(self) -> dict:

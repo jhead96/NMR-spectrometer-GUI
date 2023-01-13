@@ -54,6 +54,7 @@ class RunApp(Ui_MainWindow):
         self.expt_manager.curr_command.connect(self.change_treewidget_item_colour)
         self.expt_manager.experiment_finished.connect(self.reset_expt_tab)
         self.expt_manager.NMR_data.connect(self.update_plot)
+        self.expt_manager.PPMS_data_to_gui.connect(self.update_PPMS_condition_labels)
 
         # Initialise default sequence and data filepaths
         self.default_seq_filepath = 'sequences\\'
@@ -92,6 +93,7 @@ class RunApp(Ui_MainWindow):
         self.removeCommandBtn.clicked.connect(self.remove_command)
         self.editCommandBtn.clicked.connect(self.edit_command)
         self.startExptBtn.clicked.connect(self.run_expt)
+        self.saveDirBtn.clicked.connect(self.set_save_dir)
 
     def initialise_plot_widgets(self) -> None:
         """
@@ -383,11 +385,13 @@ class RunApp(Ui_MainWindow):
         # Update treewidget
         self.update_experiment_treewidget()
 
-    def run_expt(self):
+    def run_expt(self) -> None:
         self.startExptBtn.setDisabled(True)
+        self.saveDirBtn.setDisabled(True)
+        self.expt_manager.set_current_sample(self.active_sample)
         self.expt_manager.start_experiment()
 
-    def change_treewidget_item_colour(self, index: int, reset: bool = False):
+    def change_treewidget_item_colour(self, index: int, reset: bool = False) -> None:
 
 
         # Define brushes
@@ -425,170 +429,42 @@ class RunApp(Ui_MainWindow):
         self.plot_manager.update_plot(ch1_average, 'average_time', 'ch1')
         self.plot_manager.update_plot(ch2_average, 'average_time', 'ch2')
 
-
-    def reset_expt_tab(self, last_index):
+    def reset_expt_tab(self, last_index: int) -> None:
         """
         Resets the main tab after an experiment is finished.
         """
 
         self.startExptBtn.setDisabled(False)
-
+        self.saveDirBtn.setDisabled(False)
+        # Handle any early exit
         if last_index == -1:
             self.show_dialog("No commands in experiment!")
+            return
+        if last_index == -2:
+            self.show_dialog("No output directory selected!")
             return
 
         self.change_treewidget_item_colour(last_index, reset=True)
 
-    def update_expt_labels(self, repeat='--'):
+    def update_expt_labels(self, repeat: str | int = '--') -> None:
         """
         Updates the 'repeat' label during an experiment.
         """
         self.repeatValLbl.setText(f"{repeat}")
 
-    def create_data_directory(self):
-        """
-        Creates a data folder to store the data files for the current sample.
-        """
+    def update_PPMS_condition_labels(self, T: float, H: float) -> None:
+        self.tempValLbl.setText(f"{T:.3}")
+        self.fieldValLbl.setText(f"{H:.3}")
 
-        # Construct directory path
-        dir_path = self.default_data_filepath + self.sample_name
+    def set_save_dir(self) -> None:
+        save_dir = QtWidgets.QFileDialog.getExistingDirectory()
 
-        # Check if sample name has been changed from default
-        if self.sample_name != "":
-            # Check if directory already exists
-            if not os.path.exists(dir_path):
-                os.makedirs(dir_path)
+        if save_dir:
+            self.currentDataDirLineEdit.setText(save_dir.split('/')[-1])
+            self.expt_manager.set_output_directory(save_dir)
         else:
-            self.show_dialog("No sample name has been saved!")
-
-    def create_data_file(self, seq_name, rep):
-        """
-        Creates a data file for a given sample and adds useful information to the header.
-        """
-
-        # Initialise loop variable
-        i = 0
-
-        # Reset data file cache
-        self.data_file_cache = []
-
-        # Repeat for number of repeats
-        while i < rep:
-            # Construct file path (data/sample name/sample name + seq name + expt number.txt)
-            file_path = self.default_data_filepath + self.sample_name + '\\' + self.sample_name + '_' + seq_name + '_expt{}'.format(i+1) +'.txt'
-
-            # Create data file
-            f = open(file_path, "w+")
-
-            # Write header
-            f.write("[HEADER]\n")
-            f.write(f"SAMPLE NAME,{self.sample_name}\n")
-            f.write(f"SAMPLE MASS (mg),{self.sample_mass}\n")
-            f.write(f"SAMPLE SHAPE,{self.sample_shape}\n")
-            f.write(f"SEQUENCE,{seq_name}\n")
-            f.write(f"EXPERIMENT NUMBER,{i+1}\n")
-            f.write("[DATA]\n")
-            f.close()
-
-            i += 1
-
-    def get_data_directory(self):
-        """
-        Gets a selected data directory and outputs the files within to the ComboBox on the 'Plot' tab.
-        """
-        # Get folder
-        directory_path = QtWidgets.QFileDialog.getExistingDirectory(None, 'Select data folder')
-        # Update textbox
-        self.currentDataFolder.setText(directory_path.split('/')[-1])
-
-        # Read data files from folder
-        data_filenames = os.listdir(directory_path)
-
-        # Remove .txt for combo box display name
-        display_names = []
-        for filename in data_filenames:
-            display_names.append(filename.split('.')[0])
-
-        # Clear combo box
-        self.datafileCombobox.clear()
-
-        # Add names to combo box
-        self.datafileCombobox.addItems(display_names)
-
-    def plot_data(self):
-        def get_data_filepath():
-            """
-            Constructs data file path from combobox selection.
-            Returns: filepath
-            """
-
-            selected_filepath = '{}.txt'.format(self.datafileCombobox.currentText())
-            filepath = self.default_data_filepath + self.currentDataFolder.text() + '\\' + selected_filepath
-            return filepath
-
-        def get_header_size(filepath):
-            """
-            Calculates the header size of a given data file.
-            Returns: Header size
-            """
-            count = 0
-            with open(filepath) as f:
-
-                for line in f:
-                    count += 1
-                    if line == '[DATA]\n':
-                        break
-
-            header_size = count + 1
-
-            return header_size
-
-        def clear_widgets():
-            """
-            Clears both plot widgets.
-            """
-
-            self.timePlotWidget.canvas.ax.clear()
-            self.timePlotWidget.canvas.draw()
-            self.frqPlotWidget.canvas.ax.clear()
-            self.frqPlotWidget.canvas.draw()
-
-        def fourier_transform(data, fs):
-            Ts = 1/fs
-            N = data.size
-            data_FFT = scipy.fft.fft(data)
-            xf = scipy.fft.fftfreq(N, d=Ts)
-
-            return xf, data_FFT
-
-
-        # Clear plot widgets
-        clear_widgets()
-        # Get data filepath
-        data_filepath = get_data_filepath()
-        # Get header size
-        skip_rows = get_header_size(data_filepath)
-        # Read data from selected file
-        data = np.loadtxt(data_filepath, delimiter=',', skiprows=skip_rows)
-        # Calculate FFT frequencies and values for fs = 800MHz
-        xf, data_FT = fourier_transform(data[:, 0], fs=800e6)
-        N = data[:, 0].size
-
-
-        # Plot Ch A time data to time widget
-        self.timePlotWidget.canvas.ax.plot(data[:, 0])
-
-        self.timePlotWidget.canvas.ax.set_ylabel('Signal')
-        self.timePlotWidget.canvas.ax.set_title('Channel A Signal from SDR14')
-        self.timePlotWidget.canvas.draw()
-
-        # Plot Ch A FFT to frequency widget
-        self.frqPlotWidget.canvas.ax.plot(xf[0:int(N/2)], np.abs(data_FT[0:int(N/2)]))
-
-        self.frqPlotWidget.canvas.ax.set_xlabel('Frequency (Hz)')
-        self.frqPlotWidget.canvas.ax.set_ylabel('Intensity')
-        self.frqPlotWidget.canvas.ax.set_title('Spectrum')
-        self.frqPlotWidget.canvas.draw()
+            self.show_dialog("No output directory selected!")
+            return ""
 
     def show_dialog(self, msg_text: str) -> None:
         """
@@ -611,7 +487,7 @@ class RunApp(Ui_MainWindow):
             self.show_dialog("No filepath selected!")
             return ""
 
-    def shutdown_app(self):
+    def shutdown_app(self) -> None:
         self.expt_manager.close_threads()
 
 def close_GUI():
