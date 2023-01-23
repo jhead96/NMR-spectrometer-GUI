@@ -520,7 +520,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         else:
             print('Failed to set trigger')
 
-    def set_pretrigger(self, samples: int):
+    def set_pretrigger(self, samples: int = 0):
 
         valid = self.__api.ADQ_SetPreTrigSamples(self.__cu, self.device_number, samples)
 
@@ -529,7 +529,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         else:
             print('Failed to set pretrigger')
 
-    def set_trig_delay(self, samples: int):
+    def set_trig_delay(self, samples: int = 0):
 
         valid = self.__api.ADQ_SetTriggerDelay(self.__cu, self.device_number, samples)
 

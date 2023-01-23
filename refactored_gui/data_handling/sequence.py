@@ -62,3 +62,8 @@ class Sequence:
                     print(f"{field.name} is empty!")
                     self.valid_sequence = 0
 
+    def set_name(self, name: str) -> None:
+        self.name = name
+
+    def get_name(self) -> str:
+        return self.name

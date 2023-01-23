@@ -173,7 +173,8 @@ class RunApp(Ui_MainWindow):
 
         # Make Sequence object
         seq = Sequence(*save_data)
-
+        # Set name
+        seq.set_name(save_filename.split('/')[-1][:-4])
         # Save data
         if seq.valid_sequence:
             seq.save_to_file(save_filename)

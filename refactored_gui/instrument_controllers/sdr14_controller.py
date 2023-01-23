@@ -4,6 +4,9 @@ import ctypes as ct
 from dataclasses import dataclass
 from enum import Enum
 
+import numpy as np
+
+
 class SDR14:
 
     def __init__(self, api_path: str = r"M:\Research\NEW FPGA development\NMR spectrometer GUI\refactored_gui\instrument_controllers\ADQAPI.dll") -> None:
@@ -148,7 +151,7 @@ class SDR14:
             print("Write unsuccessful!")
         return conf
 
-    def enable_device(self):
+    def enable_device(self) -> None:
         """
         Enables device by writing '1' to user register 0. Must be called to start any experiment.
         :return:
@@ -156,12 +159,116 @@ class SDR14:
 
         self.write_register(0, 1)
 
-    def disable_device(self):
+    def disable_device(self) -> None:
         """
         Disables device by writing '0' to user register 0.
         :return:
         """
         self.write_register(0, 0)
+
+    def set_clock_source(self) -> None:
+
+        valid = self.__api.ADQ_SetClockSource(self.__cu, self.device_number, ClockSource.INTERNAL)
+        if valid:
+            print("Clock source set to INTERNAL")
+        else:
+            print("Error setting clock source!")
+
+    def set_trigger_mode(self, trigger_type: TriggerMode) -> None:
+
+        valid = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, trigger_type)
+        if valid:
+            print(f"Trigger set to {trigger_type}")
+        else:
+            print('Failed to set trigger')
+
+    def set_pretrigger(self, samples: int):
+
+        valid = self.__api.ADQ_SetPreTrigSamples(self.__cu, self.device_number, samples)
+
+        if valid:
+            print(f"Pretrigger = {samples} samples")
+        else:
+            print('Failed to set pretrigger')
+
+    def set_trig_delay(self, samples: int):
+
+        valid = self.__api.ADQ_SetTriggerDelay(self.__cu, self.device_number, samples)
+
+        if valid:
+            print(f"Trigger delay = {samples} samples")
+        else:
+            print('Failed to set trigger delay')
+
+    def setup_MR_mode(self) -> None:
+
+        # Setup SDR-14 for MultiRecord acquisition
+
+        valid = self.__api.ADQ_MultiRecordSetup(self.__cu, self.device_number,
+                                                 self.acquisition_parameters.num_of_records,
+                                                 self.acquisition_parameters.samples_per_record)
+        if valid:
+            print(f"MultiRecord parameters changed \n"
+                  f" Number of records: {self.acquisition_parameters.num_of_records}\n"
+                  f" Samples per record: {self.acquisition_parameters.samples_per_record}")
+        else:
+            print("Error while setting MR settings!")
+
+    def arm_MR_trigger(self):
+        # Deactivate trigger
+        self.__api.ADQ_DisarmTrigger(self.__cu, self.device_number)
+        # Activate trigger
+        trig_armed = self.__api.ADQ_ArmTrigger(self.__cu, self.device_number)
+        if trig_armed:
+            print('Trigger armed')
+
+    def MR_acquisition(self) -> (np.ndarray, np.ndarray):
+
+        # Setup SDR14
+        self.setup_MR_mode()
+        self.set_clock_source()
+        self.set_trigger_mode()
+        self.set_pretrigger()
+        self.set_trigger_delay()
+
+        # Arm trigger
+        self.arm_MR_trigger()
+
+        # Acquire data
+        self.enable_dev()
+        time.sleep(1)
+        self.disable_dev()
+        print('Data acquisition successful!')
+
+        # Initialise buffers
+        max_channels = 2
+        target_buffers = (ct.POINTER(
+            ct.c_int16 * self.acquisition_parameters.samples_per_record * self.acquisition_parameters.num_of_records)
+                          * max_channels)()
+        # Retrieve data
+        for buf_pntr in target_buffers:
+            buf_pntr.contents = (
+                    ct.c_int16 * self.acquisition_parameters.samples_per_record *
+                    self.acquisition_parameters.num_of_records)()
+
+        ADQ_TRANSFER_MODE = 0  # Default mode
+        ADQ_CHANNELS_MASK = 0x3  # Read from both channels
+
+        status = self.api.ADQ_GetData(self.cu, self.device_number, target_buffers,
+                                        self.acquisition_parameters.samples_per_record * self.acquisition_parameters.num_of_records,
+                                        2, 0, self.acquisition_parameters.num_of_records, ADQ_CHANNELS_MASK,
+                                        0, self.acquisition_parameters.samples_per_record, ADQ_TRANSFER_MODE)
+        if status:
+            print('Data retrieved successfully')
+
+        ch1_data = np.frombuffer(target_buffers[0].contents[0], dtype=np.int16)
+        ch2_data = np.frombuffer(target_buffers[1].contents[0], dtype=np.int16)
+
+        # Disarm trigger and close MR mode
+        self.api.ADQ_DisarmTrigger(self.cu, self.device_number)
+        self.api.ADQ_MultiRecordClose(self.cu, self.device_number)
+
+        return ch1_data, ch2_data
 
 
 @dataclass()
@@ -193,11 +300,17 @@ class AcquisitionParameters:
         self.samples_per_record = samples_per_record
 
 
-class ClockEnum(Enum):
+class ClockSource(Enum):
     pass
+    INTERNAL = 0
+    EXTERNAL = 2
 
 
 class TriggerMode(Enum):
-    pass
+    SOFTWARE = 1
+    EXTERNAL = 2
+    LEVEL = 3
+    INTERNAL = 4
+
 
 x = SDR14()

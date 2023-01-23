@@ -1,5 +1,6 @@
 import numpy as np
 import os
+from datetime import datetime
 from data_handling.command import NMRCommand, PPMSCommand
 from ..experiment_manager.sdr14_experiments import SDR14MultiRecordExperiment
 from ..experiment_manager.ppms_experiments import PPMSWorker
@@ -19,7 +20,7 @@ class ExperimentManager(QObject):
     # PPMS signals
     run_PPMS_command = pyqtSignal(object)
     set_PPMS_output_path = pyqtSignal(str)
-    get_PPMS_conditions = pyqtSignal()
+    get_PPMS_conditions = pyqtSignal(str)
     PPMS_data_to_gui = pyqtSignal(float, float)
     close_PPMS_thread = pyqtSignal()
     # Progress signals
@@ -38,6 +39,9 @@ class ExperimentManager(QObject):
         # Make instrument threads
         self.NMR_thread, self.NMR_worker = self.create_NMR_thread()
         self.PPMS_thread, self.PPMS_worker = self.create_PPMS_thread()
+        # Flags for closing threads
+        self.NMR_safe_to_close = False
+        self.PPMS_safe_to_close = False
 
     def create_NMR_thread(self) -> tuple[QThread, SpectrometerController]:
         thread = QThread()
@@ -87,7 +91,8 @@ class ExperimentManager(QObject):
             self.experiment_finished.emit(-2)
             return
 
-        self.generate_output_directory()
+        path = self.generate_output_directory()
+        self.generate_info_file(path)
         self.run_command()
 
     def run_command(self) -> None:
@@ -110,15 +115,21 @@ class ExperimentManager(QObject):
             self.run_PPMS_command.emit(current_command)
 
     def next_command(self) -> None:
+        # Reset accumulators
+        self.ch1_accumulator = None
+        self.ch2_accumulator = None
+        # Increment command
         self.active_command += 1
+        # Run
         self.run_command()
 
-    def emit_repeat_to_gui(self, repeat: int) -> None:
+    def emit_repeat_to_gui(self, repeat: int, seq_name: str) -> None:
         self.current_repeat.emit(repeat)
         # Poll PPMS
-        self.get_PPMS_conditions.emit()
+        print(seq_name)
+        self.get_PPMS_conditions.emit(seq_name)
 
-    def emit_NMR_data_to_gui(self, rep: int, ch1_data: np.ndarray, ch2_data: np.ndarray) -> None:
+    def emit_NMR_data_to_gui(self, rep: int, ch1_data: np.ndarray, ch2_data: np.ndarray, save_dir: str) -> None:
 
         if self.ch1_accumulator is None:
             self.ch1_accumulator = np.zeros(ch1_data.size)
@@ -131,6 +142,12 @@ class ExperimentManager(QObject):
         ch1_average = self.ch1_accumulator / rep
         ch2_average = self.ch2_accumulator / rep
 
+        # Get current command
+        current_command = self.command_list.get_command(self.active_command)
+        seq_name = current_command.sequence_filepath.split('/')[-1][:-4]
+
+        # Save data
+        np.savetxt(f"{save_dir}/{seq_name}_avg.txt", (ch1_average, ch2_average))
         # Send data to plotting
         self.NMR_data.emit(ch1_data, ch2_data, ch1_average, ch2_average)
 
@@ -143,7 +160,7 @@ class ExperimentManager(QObject):
     def set_output_directory(self, directory: str) -> None:
         self.output_directory = directory
 
-    def generate_output_directory(self) -> None:
+    def generate_output_directory(self) -> str:
 
         if self.current_sample is None:
             dir_name = "Unnamed sample"
@@ -171,9 +188,24 @@ class ExperimentManager(QObject):
         self.set_NMR_output_path.emit(full_output_path)
         self.set_PPMS_output_path.emit(full_output_path)
 
+        return full_output_path
+
+    def generate_info_file(self, path) -> None:
+
+        now = datetime.now()
+        timestamp = now.strftime("%Y-%m-%d-%H:%M:%S")
+
+        with open(f"{path}/info.txt", 'w') as f:
+            f.write(f"START TIME, {timestamp}\n")
+            if self.current_sample:
+                f.write(f"SAMPLE NAME, {self.current_sample.name}\n")
+                f.write(f"SAMPLE MASS (mg), {self.current_sample.mass}\n")
+                f.write(f"SAMPLE SHAPE, {self.current_sample.shape}\n")
+
     def close_threads(self):
         self.close_NMR_thread.emit()
         self.close_PPMS_thread.emit()
+
 
 class CommandList(QObject):
 
