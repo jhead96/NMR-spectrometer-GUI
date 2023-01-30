@@ -29,6 +29,10 @@ class SDR14:
         self.num_registers = 16
         self.initialise_registers()
 
+        # Initialise reg function -> reg number look-up
+        self.register_lookup = {'frequency': 1, 'TX_phase': -1, 'RX_phase': -1,
+                                'p1': 2, 'p2': 3, 'p3': 4, 'g1': 5, 'g2': 6, 'rec': 7}
+        self.register_mask = {'TX_phase': 0, 'RX_phase': 0}
         # Initialise acquisition parameters
         self.initial_parameters, self.acquisition_parameters = self.initialise_acquisition_parameters()
 
@@ -166,15 +170,15 @@ class SDR14:
         """
         self.write_register(0, 0)
 
-    def set_clock_source(self) -> None:
+    def set_clock_source(self, clock_source) -> None:
 
-        valid = self.__api.ADQ_SetClockSource(self.__cu, self.device_number, ClockSource.INTERNAL)
+        valid = self.__api.ADQ_SetClockSource(self.__cu, self.device_number, clock_source)
         if valid:
             print("Clock source set to INTERNAL")
         else:
             print("Error setting clock source!")
 
-    def set_trigger_mode(self, trigger_type: TriggerMode) -> None:
+    def set_trigger_mode(self, trigger_type) -> None:
 
         valid = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, trigger_type)
         if valid:
@@ -226,8 +230,8 @@ class SDR14:
 
         # Setup SDR14
         self.setup_MR_mode()
-        self.set_clock_source()
-        self.set_trigger_mode()
+        self.set_clock_source(ClockSource.INTERNAL)
+        self.set_trigger_mode(TriggerMode.EXTERNAL)
         self.set_pretrigger()
         self.set_trigger_delay()
 
@@ -301,7 +305,6 @@ class AcquisitionParameters:
 
 
 class ClockSource(Enum):
-    pass
     INTERNAL = 0
     EXTERNAL = 2
 

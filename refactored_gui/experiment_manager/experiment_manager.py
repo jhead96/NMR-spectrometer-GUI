@@ -4,7 +4,7 @@ from datetime import datetime
 from data_handling.command import NMRCommand, PPMSCommand
 from ..experiment_manager.sdr14_experiments import SDR14MultiRecordExperiment
 from ..experiment_manager.ppms_experiments import PPMSWorker
-from ..experiment_manager.multithreading_instrument_classes import SpectrometerController, PPMSController
+from ..experiment_manager.multithreading_instrument_classes import SpectrometerControllerDummy, PPMSControllerDummy
 from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
 
 
@@ -43,10 +43,10 @@ class ExperimentManager(QObject):
         self.NMR_safe_to_close = False
         self.PPMS_safe_to_close = False
 
-    def create_NMR_thread(self) -> tuple[QThread, SpectrometerController]:
+    def create_NMR_thread(self) -> tuple[QThread, SpectrometerControllerDummy]:
         thread = QThread()
         # Create Worker instance for spectrometer
-        worker = SpectrometerController()
+        worker = SpectrometerControllerDummy()
         worker.moveToThread(thread)
         # Connect signals
         worker.finished.connect(self.next_command)
@@ -55,16 +55,16 @@ class ExperimentManager(QObject):
         # Connect slots
         self.run_NMR_command.connect(worker.run_command)
         self.set_NMR_output_path.connect(worker.set_save_dir)
-        self.close_NMR_thread.connect(worker.close_thread)
+        self.close_NMR_thread.connect(worker.shutdown_thread)
         # Start thread
         thread.start()
 
         return thread, worker
 
-    def create_PPMS_thread(self) -> tuple[QThread, PPMSController]:
+    def create_PPMS_thread(self) -> tuple[QThread, PPMSControllerDummy]:
         thread = QThread()
         # Create worker instance for PPMS
-        worker = PPMSController()
+        worker = PPMSControllerDummy()
         worker.moveToThread(thread)
         # Connect signals
         worker.finished.connect(self.next_command)

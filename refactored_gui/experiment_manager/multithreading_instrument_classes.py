@@ -2,11 +2,39 @@ from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from refactored_gui.instrument_controllers.sdr14_controller import SDR14
 from refactored_gui.instrument_controllers.ppms_controller import PPMS
 from datetime import datetime
+from abc import ABC, abstractmethod
 import time
 import numpy as np
+from enum import Enum
 
 
-class SpectrometerController(QObject):
+class FinalMeta(type(ABC), type(QObject)):
+    pass
+
+
+class SpectrometerThreadController(ABC):
+
+    @abstractmethod
+    def prepare_device(self, sequence):
+        pass
+
+    @abstractmethod
+    def run_command(self, command):
+        pass
+
+    @abstractmethod
+    def save_data(self, ch1_data: np.ndarray, ch2_data: np.ndarray, repeats: int, seq_name: str):
+        pass
+
+    def set_save_dir(self, save_dir: str):
+        pass
+
+    @abstractmethod
+    def shutdown_thread(self):
+        pass
+
+
+class SpectrometerControllerDummy(SpectrometerThreadController, QObject, metaclass=FinalMeta):
 
     finished = pyqtSignal()
     current_repeat = pyqtSignal(int, str)
@@ -15,7 +43,6 @@ class SpectrometerController(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self.spectrometer = SDR14()
         self.save_dir = None
         print("[NMR Thread] __init__()")
 
@@ -56,7 +83,7 @@ class SpectrometerController(QObject):
         np.savetxt(f"{self.save_dir}/{seq_name}_{repeat}.txt", (ch1_data, ch2_data))
 
     @pyqtSlot()
-    def close_thread(self) -> None:
+    def shutdown_thread(self) -> None:
         print("[NMR Thread] Disconnecting SDR14")
         self.safe_to_close.emit()
 
@@ -66,7 +93,96 @@ class SpectrometerController(QObject):
         return np.random.random(l)
 
 
-class PPMSController(QObject):
+class SpectrometerController(SpectrometerThreadController, QObject, metaclass=FinalMeta):
+
+    finished = pyqtSignal()
+    current_repeat = pyqtSignal(int, str)
+    data_out = pyqtSignal(int, object, object, str)
+    safe_to_close = pyqtSignal()
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.SDR14 = SDR14
+        self.save_dir = None
+        print("[NMR Thread] __init__()")
+
+    @pyqtSlot(object)
+    def run_command(self, command) -> None:
+        self.prepare_device(command.sequence)
+        repeats = command.repeats
+        seq_name = command.sequence_filepath.split('/')[-1][:-4]
+        print(f"[NMR Thread] Running command: {command}")
+        for i in range(0, repeats):
+            self.current_repeat.emit(i + 1, seq_name)
+            print(f"[NMR Thread] Current scan = {i + 1} / {repeats}")
+            ch1_data, ch2_data = self.SDR14.MR_acquisition()
+            self.data_out.emit(i + 1, ch1_data, ch2_data, self.save_dir)
+            self.save_data(ch1_data, ch2_data, i + 1, seq_name)
+            time.sleep(0.5)
+
+        print("[NMR Thread] Dummy code finished")
+        self.finished.emit()
+
+    def prepare_device(self, sequence) -> None:
+
+        # Write sequence to SDR14 registers
+        for key, value in sequence.convert_to_dict().items():
+            if key == "name":
+                print(f"Parsing sequence: {value}")
+            elif key in ["TX_phase", "RX_phase"]:
+                register_number = self.SDR14.register_lookup[key]
+                mask = self.SDR14.register_mask[key]
+                self.SDR14.write_register(register_number, value, mask=mask)
+            else:
+                register_number = self.SDR14.register_lookup[key]
+                self.SDR14.write_register(register_number, value)
+
+    @pyqtSlot(str)
+    def set_save_dir(self, save_dir: str) -> None:
+        self.save_dir = save_dir
+
+    def save_data(self, ch1_data: np.ndarray, ch2_data: np.ndarray, repeat: int, seq_name: str) -> None:
+        np.savetxt(f"{self.save_dir}/{seq_name}_{repeat}.txt", (ch1_data, ch2_data))
+
+    @pyqtSlot()
+    def shutdown_thread(self) -> None:
+        print("[NMR Thread] Disconnecting SDR14")
+        self.safe_to_close.emit()
+
+
+class PPMSThreadController(ABC):
+
+    @abstractmethod
+    def run_command(self, command):
+        pass
+
+    @abstractmethod
+    def poll_PPMS(self):
+        pass
+
+    @abstractmethod
+    def log_data_to_file(self, T: float, H: float, seq_name: str) -> None:
+        pass
+
+    @abstractmethod
+    def set_save_dir(self, save_dir: str) -> None:
+        pass
+
+    @abstractmethod
+    def shutdown_thread(self):
+        pass
+
+
+class PPMSController(PPMSThreadController, QObject, metaclass=FinalMeta):
+
+
+    def __init__(self):
+        super().__init__()
+        self.PPMS = PPMS()
+        self.save_dir = None
+        print("[PPMS Thread] __init__()")
+
+class PPMSControllerDummy(PPMSThreadController, QObject, metaclass=FinalMeta):
 
     PPMS_data_out = pyqtSignal(float, float)
     finished = pyqtSignal()
@@ -74,7 +190,6 @@ class PPMSController(QObject):
 
     def __init__(self) -> None:
         super().__init__()
-        self.PPMS = PPMS()
         self.save_dir = None
         print("[PPMS Thread] __init__()")
 

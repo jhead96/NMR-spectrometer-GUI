@@ -365,7 +365,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         """
         pass
 
-    def reg_refresh(self, quiet:bool = None):
+    def reg_refresh(self, quiet: bool = None):
         """
         Pull all user register values from device
         """
@@ -377,7 +377,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
             for i in range(16):
                 print("reg{} read: {}".format(i, self.reg_cache[i]))
 
-    def reg_reset(self, quiet:bool = None) -> int:
+    def reg_reset(self, quiet: bool = None) -> int:
         """
         Default (initial) user_regiser values
 
@@ -614,7 +614,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
 
         return ch1_data, ch2_data
 
-    def External_MR_acquisition(self, trig_mode: str) -> (np.array, np.array):
+    def external_MR_acquisition(self, trig_mode: str) -> (np.array, np.array):
 
         # Initialise streaming parameters
         self.set_clock_source()
