@@ -43,7 +43,7 @@ class PPMSCommand:
     rate_limits: list[int] | None = None
     variable_type: str | None = None
     unit: str | None = None
-    command_lbl: str | None = None
+    command_lbl: str | None = field(default=None, repr=False)
 
     def __post_init__(self) -> None:
         """
@@ -91,17 +91,17 @@ class PPMSCommand:
 class PPMSTemperatureCommand(PPMSCommand):
 
     command_type: str = "PPMS-Temp"
-    unit: str = "K"
-    variable_type: str = "T"
-    value_limits: list[int] = field(default_factory=lambda: [2, 400])
-    rate_limits: list[int] = field(default_factory=lambda: [2, 20])
+    unit: str = field(default="K", repr=False)
+    variable_type: str = field(default="T", repr=False)
+    value_limits: list[int] = field(default_factory=lambda: [2, 400], repr=False)
+    rate_limits: list[int] = field(default_factory=lambda: [2, 20], repr=False)
 
 
 @dataclass
 class PPMSFieldCommand(PPMSCommand):
 
     command_type: str = "PPMS-Field"
-    unit: str = "Oe"
-    variable_type: str = "B"
-    value_limits: list[int] = field(default_factory=lambda: [-70000, 70000])
-    rate_limits: list[int] = field(default_factory=lambda: [10, 500])
+    unit: str = field(default="Oe", repr=False)
+    variable_type: str = field(default="B", repr=False)
+    value_limits: list[int] = field(default_factory=lambda: [-70000, 70000], repr=False)
+    rate_limits: list[int] = field(default_factory=lambda: [10, 500], repr=False)

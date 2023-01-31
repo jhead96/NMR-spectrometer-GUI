@@ -4,6 +4,7 @@ from refactored_gui.instrument_controllers.ppms_controller import PPMS
 from datetime import datetime
 from abc import ABC, abstractmethod
 import time
+import logging
 import numpy as np
 from enum import Enum
 
@@ -26,6 +27,7 @@ class SpectrometerThreadController(ABC):
     def save_data(self, ch1_data: np.ndarray, ch2_data: np.ndarray, repeats: int, seq_name: str):
         pass
 
+    @abstractmethod
     def set_save_dir(self, save_dir: str):
         pass
 
@@ -43,8 +45,34 @@ class SpectrometerControllerDummy(SpectrometerThreadController, QObject, metacla
 
     def __init__(self) -> None:
         super().__init__()
+        self.logger = self.initialise_logger()
         self.save_dir = None
-        print("[NMR Thread] __init__()")
+        print("NMR thread started")
+
+    @staticmethod
+    def initialise_logger() -> logging.Logger:
+
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+
+        # Log formatting
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(log_format, date_format)
+
+        # File logging
+        file_handler = logging.FileHandler("logs.log")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+
+        # Console logging
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.DEBUG)
+        logger.addHandler(console_handler)
+
+        return logger
 
     @pyqtSlot(object)
     def run_command(self, command) -> None:
@@ -182,6 +210,7 @@ class PPMSController(PPMSThreadController, QObject, metaclass=FinalMeta):
         self.save_dir = None
         print("[PPMS Thread] __init__()")
 
+
 class PPMSControllerDummy(PPMSThreadController, QObject, metaclass=FinalMeta):
 
     PPMS_data_out = pyqtSignal(float, float)
@@ -190,8 +219,34 @@ class PPMSControllerDummy(PPMSThreadController, QObject, metaclass=FinalMeta):
 
     def __init__(self) -> None:
         super().__init__()
+        self.logger = self.initialise_logger()
         self.save_dir = None
-        print("[PPMS Thread] __init__()")
+        self.logger.info("PPMS thread started")
+
+    @staticmethod
+    def initialise_logger() -> logging.Logger:
+
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+
+        # Log formatting
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(log_format, date_format)
+
+        # File logging
+        file_handler = logging.FileHandler("logs.log")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+
+        # Console logging
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.DEBUG)
+        logger.addHandler(console_handler)
+
+        return logger
 
     @pyqtSlot(object)
     def run_command(self, command) -> None:
@@ -228,6 +283,6 @@ class PPMSControllerDummy(PPMSThreadController, QObject, metaclass=FinalMeta):
             f.write(f"{timestamp},{T},{H}\n")
 
     @pyqtSlot()
-    def close_thread(self) -> None:
+    def shutdown_thread(self) -> None:
         print("[PPMS Thread] Disconnecting PPMS")
         self.safe_to_close.emit()

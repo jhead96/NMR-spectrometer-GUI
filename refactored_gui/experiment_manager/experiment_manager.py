@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import logging
 from datetime import datetime
 from data_handling.command import NMRCommand, PPMSCommand
 from ..experiment_manager.sdr14_experiments import SDR14MultiRecordExperiment
@@ -29,6 +30,8 @@ class ExperimentManager(QObject):
 
     def __init__(self):
         super().__init__()
+        # Initialise logger
+        self.logger = self.initialise_logger()
         # Initialise variables
         self.command_list = CommandList()
         self.active_command = 0
@@ -43,11 +46,37 @@ class ExperimentManager(QObject):
         self.NMR_safe_to_close = False
         self.PPMS_safe_to_close = False
 
+    @staticmethod
+    def initialise_logger() -> logging.Logger:
+
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+
+        # Log formatting
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(log_format, date_format)
+
+        # File logging
+        file_handler = logging.FileHandler("logs.log")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+
+        # Console logging
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.DEBUG)
+        logger.addHandler(console_handler)
+
+        return logger
+
     def create_NMR_thread(self) -> tuple[QThread, SpectrometerControllerDummy]:
         thread = QThread()
         # Create Worker instance for spectrometer
         worker = SpectrometerControllerDummy()
         worker.moveToThread(thread)
+        self.logger.info("NMR worker thread created")
         # Connect signals
         worker.finished.connect(self.next_command)
         worker.current_repeat.connect(self.emit_repeat_to_gui)
@@ -59,6 +88,7 @@ class ExperimentManager(QObject):
         # Start thread
         thread.start()
 
+
         return thread, worker
 
     def create_PPMS_thread(self) -> tuple[QThread, PPMSControllerDummy]:
@@ -66,6 +96,7 @@ class ExperimentManager(QObject):
         # Create worker instance for PPMS
         worker = PPMSControllerDummy()
         worker.moveToThread(thread)
+        self.logger.info("PPMS worker thread created")
         # Connect signals
         worker.finished.connect(self.next_command)
         worker.PPMS_data_out.connect(self.emit_PPMS_data_to_gui)
@@ -73,7 +104,7 @@ class ExperimentManager(QObject):
         self.run_PPMS_command.connect(worker.run_command)
         self.set_PPMS_output_path.connect(worker.set_save_dir)
         self.get_PPMS_conditions.connect(worker.poll_PPMS)
-        self.close_PPMS_thread.connect(worker.close_thread)
+        self.close_PPMS_thread.connect(worker.shutdown_thread)
         # Start thread
         thread.start()
 
@@ -82,15 +113,16 @@ class ExperimentManager(QObject):
     def start_experiment(self) -> None:
 
         if not self.command_list.get_command_list():
-            print("No commands in command list!")
+            self.logger.warning("No commands in command list")
             self.experiment_finished.emit(-1)
             return
 
         if not self.output_directory:
-            print("No output directory selected")
+            self.logger.warning("No output directory selected")
             self.experiment_finished.emit(-2)
             return
 
+        self.logger.info(f"Experiment starting with sample {self.current_sample}")
         path = self.generate_output_directory()
         self.generate_info_file(path)
         self.run_command()
@@ -103,11 +135,12 @@ class ExperimentManager(QObject):
             self.active_command = 0
             self.ch1_accumulator = None
             self.ch2_accumulator = None
-            print("Experiment finished!")
+            self.logger.info("Experiment finished")
             return
 
         self.curr_command.emit(self.active_command)
         current_command = self.command_list.get_command(self.active_command)
+        self.logger.info(f"Starting command: {current_command}")
 
         if isinstance(current_command, NMRCommand):
             self.run_NMR_command.emit(current_command)
@@ -126,7 +159,7 @@ class ExperimentManager(QObject):
     def emit_repeat_to_gui(self, repeat: int, seq_name: str) -> None:
         self.current_repeat.emit(repeat)
         # Poll PPMS
-        print(seq_name)
+        self.logger.debug(seq_name)
         self.get_PPMS_conditions.emit(seq_name)
 
     def emit_NMR_data_to_gui(self, rep: int, ch1_data: np.ndarray, ch2_data: np.ndarray, save_dir: str) -> None:
@@ -156,9 +189,11 @@ class ExperimentManager(QObject):
 
     def set_current_sample(self, sample) -> None:
         self.current_sample = sample
+        self.logger.debug(f"Set active sample to {sample}")
 
     def set_output_directory(self, directory: str) -> None:
         self.output_directory = directory
+        self.logger.debug(f"Set output directory to {directory}")
 
     def generate_output_directory(self) -> str:
 
@@ -188,6 +223,8 @@ class ExperimentManager(QObject):
         self.set_NMR_output_path.emit(full_output_path)
         self.set_PPMS_output_path.emit(full_output_path)
 
+        self.logger.info(f"Output directory generated: {full_output_path}")
+
         return full_output_path
 
     def generate_info_file(self, path) -> None:
@@ -195,12 +232,18 @@ class ExperimentManager(QObject):
         now = datetime.now()
         timestamp = now.strftime("%Y-%m-%d-%H:%M:%S")
 
+        command_list = self.command_list.get_command_list()
+        command_str = "COMMAND LIST, " + "".join([f"{com}\t" for com in command_list])
+
         with open(f"{path}/info.txt", 'w') as f:
             f.write(f"START TIME, {timestamp}\n")
             if self.current_sample:
                 f.write(f"SAMPLE NAME, {self.current_sample.name}\n")
                 f.write(f"SAMPLE MASS (mg), {self.current_sample.mass}\n")
                 f.write(f"SAMPLE SHAPE, {self.current_sample.shape}\n")
+            f.write(command_str)
+
+        self.logger.info(f"Info file created at {path}/info.txt")
 
     def close_threads(self):
         self.close_NMR_thread.emit()

@@ -6,6 +6,7 @@ import numpy as np
 import scipy
 import time
 import os
+import logging
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 
@@ -23,12 +24,15 @@ from refactored_gui.experiment_manager.experiment_manager import ExperimentManag
 # Plot management
 from refactored_gui.plot_manager.plot_managers import PyqtgraphPlotManager
 
+
 class RunApp(Ui_MainWindow):
     """
     Class to handle operation of the GUI on the main thread.
     """
 
     def __init__(self, window) -> None:
+        # Initialise logger
+        self.logger = self.initialise_logger()
 
         # Setup GUI components
         self.setupUi(window)
@@ -37,10 +41,6 @@ class RunApp(Ui_MainWindow):
 
         # Initialise active sample
         self.active_sample = None
-
-        # Check for device connections
-        self.spectrometer = SDR14()
-        self.PPMS = PPMS()
 
         # Initialise plot manager
         plot_widgets = {'average_time': self.averageTimePlotWidget, 'last_time': self.lastTimePlotWidget}
@@ -56,21 +56,33 @@ class RunApp(Ui_MainWindow):
         self.expt_manager.NMR_data.connect(self.update_plot)
         self.expt_manager.PPMS_data_to_gui.connect(self.update_PPMS_condition_labels)
 
-        # Initialise default sequence and data filepaths
+        # Initialise default sequence filepath
         self.default_seq_filepath = 'sequences\\'
-        self.default_data_filepath = 'data\\'
 
-        # Initialise data file cache
-        self.data_file_cache = []
+    @staticmethod
+    def initialise_logger() -> logging.Logger:
 
-        # Initialise registers to be updated on FPGA
-        self.registers = np.array([1, 2, 3, 5, 7])
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
 
-        # Initialise command count and command count
-        self.current_command = 0
-        self.total_commands = 0
+        # Log formatting
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(log_format, date_format)
 
-        self.num_parameters = 6
+        # File logging
+        file_handler = logging.FileHandler("logs.log")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+
+        # Console logging
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.DEBUG)
+        logger.addHandler(console_handler)
+
+        return logger
 
     def connect_button_functions(self) -> None:
         """
@@ -130,8 +142,11 @@ class RunApp(Ui_MainWindow):
 
         # Check validity of fields
         if not new_sample.valid_name:
+            self.logger.warning("Invalid sample name")
             self.show_dialog("Invalid sample name!")
+
         elif not new_sample.valid_mass:
+            self.logger.warning("Invalid sample mass")
             self.show_dialog("Invalid sample mass!")
         else:
             self.active_sample = new_sample
@@ -154,6 +169,7 @@ class RunApp(Ui_MainWindow):
         self.sampleNameLineEdit.setText("")
         self.sampleMassLineEdit.setText("")
         self.sampleShapeLineEdit.setText("")
+        self.logger.debug("Active sample cleared")
 
     # noinspection PyTypeChecker
     def save_seq_file(self) -> None:
@@ -440,12 +456,15 @@ class RunApp(Ui_MainWindow):
         # Handle any early exit
         if last_index == -1:
             self.show_dialog("No commands in experiment!")
+            self.logger.warning("No commands in experiment")
             return
         if last_index == -2:
             self.show_dialog("No output directory selected!")
+            self.logger.warning("No output directory selected")
             return
 
         self.change_treewidget_item_colour(last_index, reset=True)
+        self.logger.info("GUI reset")
 
     def update_expt_labels(self, repeat: str | int = '--') -> None:
         """
@@ -464,6 +483,7 @@ class RunApp(Ui_MainWindow):
             self.currentDataDirLineEdit.setText(save_dir.split('/')[-1])
             self.expt_manager.set_output_directory(save_dir)
         else:
+            self.warning("No output directory selected")
             self.show_dialog("No output directory selected!")
             return ""
 
@@ -489,6 +509,7 @@ class RunApp(Ui_MainWindow):
             return ""
 
     def shutdown_app(self) -> None:
+        self.logger.info("Closing application")
         self.expt_manager.close_threads()
 
 def close_GUI():
