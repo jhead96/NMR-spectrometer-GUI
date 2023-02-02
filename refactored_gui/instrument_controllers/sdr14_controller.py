@@ -16,7 +16,6 @@ class SDR14:
 
         # Initialise logger
         self.logger = self.initialise_logger()
-        self.logger.info("hi")
         # Get api
         self.api = self.retrieve_api()
 
@@ -102,7 +101,7 @@ class SDR14:
         conf = self.api.DeleteADQControlUnit(self.cu)
 
         if conf:
-            print("Control unit deleted!")
+            self.logger.info("ADQ Control unit deleted!")
 
     def get_device_number(self):
         """
@@ -138,7 +137,7 @@ class SDR14:
                 print(f"Error writing to register {i}, exiting...")
                 break
 
-        print("All registers initialised to 0")
+        self.logger.info("All registers initialised to 0")
 
     @staticmethod
     def initialise_acquisition_parameters() -> tuple:
@@ -159,9 +158,9 @@ class SDR14:
                                               reg_number, ct.byref(data_response))
 
         if conf:
-            print(f"Register {reg_number} = {data_response.value}")
+            self.logger.info(f"Register {reg_number} = {data_response.value}")
         else:
-            print("Read unsuccessful!")
+            self.logger.warning("Read unsuccessful!")
 
         return conf
 
@@ -179,9 +178,9 @@ class SDR14:
                                               reg_number, mask, data_write, ct.byref(data_response))
 
         if conf:
-            print(f"Register {reg_number} = {data_response.value}")
+            self.logger.info(f"Register {reg_number} = {data_response.value}")
         else:
-            print("Write unsuccessful!")
+            self.logger.warning("Write unsuccessful!")
         return conf
 
     def enable_device(self) -> None:
@@ -203,35 +202,35 @@ class SDR14:
 
         valid = self.__api.ADQ_SetClockSource(self.__cu, self.device_number, clock_source)
         if valid:
-            print("Clock source set to INTERNAL")
+            self.logger.info("Clock source set to INTERNAL")
         else:
-            print("Error setting clock source!")
+            self.logger.warning("Error setting clock source!")
 
     def set_trigger_mode(self, trigger_type) -> None:
 
         valid = self.__api.ADQ_SetTriggerMode(self.__cu, self.device_number, trigger_type)
         if valid:
-            print(f"Trigger set to {trigger_type}")
+            self.logger.info(f"Trigger set to {trigger_type}")
         else:
-            print('Failed to set trigger')
+            self.logger.warning('Failed to set trigger')
 
     def set_pretrigger(self, samples: int):
 
         valid = self.__api.ADQ_SetPreTrigSamples(self.__cu, self.device_number, samples)
 
         if valid:
-            print(f"Pretrigger = {samples} samples")
+            self.logger.info(f"Pretrigger = {samples} samples")
         else:
-            print('Failed to set pretrigger')
+            self.logger.warning('Failed to set pretrigger')
 
     def set_trig_delay(self, samples: int):
 
         valid = self.__api.ADQ_SetTriggerDelay(self.__cu, self.device_number, samples)
 
         if valid:
-            print(f"Trigger delay = {samples} samples")
+            self.logger.info(f"Trigger delay = {samples} samples")
         else:
-            print('Failed to set trigger delay')
+            self.logger.warning('Failed to set trigger delay')
 
     def setup_MR_mode(self) -> None:
 
@@ -241,11 +240,11 @@ class SDR14:
                                                  self.acquisition_parameters.num_of_records,
                                                  self.acquisition_parameters.samples_per_record)
         if valid:
-            print(f"MultiRecord parameters changed \n"
+            self.logger.info(f"MultiRecord parameters changed \n"
                   f" Number of records: {self.acquisition_parameters.num_of_records}\n"
                   f" Samples per record: {self.acquisition_parameters.samples_per_record}")
         else:
-            print("Error while setting MR settings!")
+            self.logger.warning("Error while setting MR settings!")
 
     def arm_MR_trigger(self):
         # Deactivate trigger
@@ -253,7 +252,7 @@ class SDR14:
         # Activate trigger
         trig_armed = self.__api.ADQ_ArmTrigger(self.__cu, self.device_number)
         if trig_armed:
-            print('Trigger armed')
+            self.logger.info('Trigger armed')
 
     def MR_acquisition(self) -> (np.ndarray, np.ndarray):
 
@@ -271,7 +270,7 @@ class SDR14:
         self.enable_dev()
         time.sleep(1)
         self.disable_dev()
-        print('Data acquisition successful!')
+        self.logger.info('Data acquisition successful!')
 
         # Initialise buffers
         max_channels = 2
@@ -292,7 +291,7 @@ class SDR14:
                                         2, 0, self.acquisition_parameters.num_of_records, ADQ_CHANNELS_MASK,
                                         0, self.acquisition_parameters.samples_per_record, ADQ_TRANSFER_MODE)
         if status:
-            print('Data retrieved successfully')
+            self.logger.info('Data retrieved successfully')
 
         ch1_data = np.frombuffer(target_buffers[0].contents[0], dtype=np.int16)
         ch2_data = np.frombuffer(target_buffers[1].contents[0], dtype=np.int16)
