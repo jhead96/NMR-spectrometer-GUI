@@ -47,12 +47,12 @@ class SpectrometerControllerDummy(SpectrometerThreadController, QObject, metacla
         super().__init__()
         self.logger = self.initialise_logger()
         self.save_dir = None
-        print("NMR thread started")
+        self.logger.info("NMR thread started")
 
     @staticmethod
     def initialise_logger() -> logging.Logger:
 
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger(f"{__name__}.{__class__.__name__}")
         logger.setLevel(logging.DEBUG)
 
         # Log formatting
@@ -79,17 +79,17 @@ class SpectrometerControllerDummy(SpectrometerThreadController, QObject, metacla
         self.prepare_device(command.sequence)
         repeats = command.repeats
         seq_name = command.sequence_filepath.split('/')[-1][:-4]
-        print(f"[NMR Thread] Running dummy code with command = {command}")
+        self.logger.info(f"Running dummy code with command = {command}")
         for i in range(0, repeats):
             self.current_repeat.emit(i + 1, seq_name)
-            print(f"[NMR Thread] Current scan = {i + 1} / {repeats}")
+            self.logger.info(f"Current scan = {i + 1} / {repeats}")
             ch1_data = self.generate_test_data()
             ch2_data = self.generate_test_data()
             self.data_out.emit(i + 1, ch1_data, ch2_data, self.save_dir)
             self.save_data(ch1_data, ch2_data, i+1, seq_name)
             time.sleep(0.5)
 
-        print("[NMR Thread] Dummy code finished")
+        self.logger.info("NMR Dummy code finished")
         self.finished.emit()
 
     def prepare_device(self, sequence) -> None:
@@ -97,11 +97,11 @@ class SpectrometerControllerDummy(SpectrometerThreadController, QObject, metacla
         # Write command to SDR14 registers
         for key, value in sequence.convert_to_dict().items():
             if key == "name":
-                print(f"Parsing sequence: {value}")
+                self.logger.debug(f"Parsing sequence: {value}")
             elif key in ["TX_phase", "RX_phase"]:
-                print(f"Writing {key} with mask != 0, value = {value}")
+                self.logger.debug(f"Writing {key} with mask != 0, value = {value}")
             else:
-                print(f"Writing {key} with mask = 0, value = {value}")
+                self.logger.debug(f"Writing {key} with mask = 0, value = {value}")
 
     @pyqtSlot(str)
     def set_save_dir(self, save_dir: str) -> None:
@@ -112,7 +112,7 @@ class SpectrometerControllerDummy(SpectrometerThreadController, QObject, metacla
 
     @pyqtSlot()
     def shutdown_thread(self) -> None:
-        print("[NMR Thread] Disconnecting SDR14")
+        self.logger.info("Disconnecting SDR14")
         self.safe_to_close.emit()
 
     @staticmethod
@@ -130,7 +130,7 @@ class SpectrometerController(SpectrometerThreadController, QObject, metaclass=Fi
 
     def __init__(self) -> None:
         super().__init__()
-        self.SDR14 = SDR14
+        self.SDR14 = SDR14()
         self.save_dir = None
         print("[NMR Thread] __init__()")
 
@@ -226,7 +226,7 @@ class PPMSControllerDummy(PPMSThreadController, QObject, metaclass=FinalMeta):
     @staticmethod
     def initialise_logger() -> logging.Logger:
 
-        logger = logging.getLogger(__name__)
+        logger = logging.getLogger(f"{__name__}.{__class__.__name__}")
         logger.setLevel(logging.DEBUG)
 
         # Log formatting
@@ -250,10 +250,10 @@ class PPMSControllerDummy(PPMSThreadController, QObject, metaclass=FinalMeta):
 
     @pyqtSlot(object)
     def run_command(self, command) -> None:
-        print(f"[PPMS Thread] Running dummy code with command = {command}")
+        self.logger.info(f"Running dummy code with command = {command}")
         time.sleep(2)
 
-        print("[PPMS Thread] Dummy code finished")
+        self.logger.info("Dummy code finished")
         self.finished.emit()
 
     @pyqtSlot(str)
@@ -284,5 +284,5 @@ class PPMSControllerDummy(PPMSThreadController, QObject, metaclass=FinalMeta):
 
     @pyqtSlot()
     def shutdown_thread(self) -> None:
-        print("[PPMS Thread] Disconnecting PPMS")
+        self.logger.info("Disconnecting PPMS")
         self.safe_to_close.emit()

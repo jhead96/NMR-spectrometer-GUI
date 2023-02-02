@@ -1,5 +1,7 @@
 import os
 import sys
+import logging
+
 import ctypes as ct
 from dataclasses import dataclass
 from enum import Enum
@@ -12,6 +14,9 @@ class SDR14:
     def __init__(self, api_path: str = r"M:\Research\NEW FPGA development\NMR spectrometer GUI\refactored_gui\instrument_controllers\ADQAPI.dll") -> None:
         self.api_path = api_path
 
+        # Initialise logger
+        self.logger = self.initialise_logger()
+        self.logger.info("hi")
         # Get api
         self.api = self.retrieve_api()
 
@@ -36,6 +41,31 @@ class SDR14:
         # Initialise acquisition parameters
         self.initial_parameters, self.acquisition_parameters = self.initialise_acquisition_parameters()
 
+    @staticmethod
+    def initialise_logger() -> logging.Logger:
+
+        logger = logging.getLogger(__name__)
+        logger.setLevel(logging.DEBUG)
+
+        # Log formatting
+        log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        date_format = "%Y-%m-%d %H:%M:%S"
+        formatter = logging.Formatter(log_format, date_format)
+
+        # File logging
+        file_handler = logging.FileHandler("logs.log")
+        file_handler.setFormatter(formatter)
+        file_handler.setLevel(logging.INFO)
+        logger.addHandler(file_handler)
+
+        # Console logging
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(formatter)
+        console_handler.setLevel(logging.DEBUG)
+        logger.addHandler(console_handler)
+
+        return logger
+
     def retrieve_api(self) -> ct.CDLL:
         """
         Loads ADQAPI from the designated filepath.
@@ -45,9 +75,8 @@ class SDR14:
         try:
             api = ct.cdll.LoadLibrary(self.api_path)
         except OSError as ex:
-            print(ex)
-            print("Invalid ADQAPI.dll filepath or ADQ software development kit not installed!")
-            print("ADQAPI functions disabled!")
+            self.logger.error(ex)
+            self.logger.error("Invalid ADQAPI.dll filepath or ADQ software development kit not installed!")
             api = None
 
         return api
@@ -316,4 +345,4 @@ class TriggerMode(Enum):
     INTERNAL = 4
 
 
-x = SDR14()
+#x = SDR14()
