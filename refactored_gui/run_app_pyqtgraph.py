@@ -56,8 +56,9 @@ class RunApp(Ui_MainWindow):
         self.expt_manager.NMR_data.connect(self.update_plot)
         self.expt_manager.PPMS_data_to_gui.connect(self.update_PPMS_condition_labels)
 
-        # Initialise default sequence filepath
+        # Initialise default filepaths
         self.default_seq_filepath = 'sequences\\'
+        self.default_data_filepath = 'data\\'
 
     @staticmethod
     def initialise_logger() -> logging.Logger:
@@ -476,7 +477,7 @@ class RunApp(Ui_MainWindow):
         self.tempValLbl.setText(f"{T:.3}")
         self.fieldValLbl.setText(f"{H:.3}")
 
-    def set_save_dir(self) -> None:
+    def set_save_dir(self) -> None | str:
         save_dir = QtWidgets.QFileDialog.getExistingDirectory()
 
         if save_dir:
@@ -500,7 +501,7 @@ class RunApp(Ui_MainWindow):
 
     def get_filepath_from_dialog(self, filt: str ="seq files (*.seq)") -> str:
 
-        filepath = QtWidgets.QFileDialog.getSaveFileName(filter=filt)[0]
+        filepath = QtWidgets.QFileDialog.getSaveFileName(directory=r"M:\Research\NEW FPGA development\NMR spectrometer GUI\refactored_gui\sequences", filter=filt)[0]
 
         if filepath:
             return filepath
