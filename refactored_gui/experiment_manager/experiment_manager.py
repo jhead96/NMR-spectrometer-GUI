@@ -2,11 +2,10 @@ import numpy as np
 import os
 import logging
 from datetime import datetime
-from data_handling.command import NMRCommand, PPMSCommand
-from ..experiment_manager.sdr14_experiments import SDR14MultiRecordExperiment
-from ..experiment_manager.ppms_experiments import PPMSWorker
+from ..data_handling.command import NMRCommand, PPMSCommand
 from ..experiment_manager.multithreading_instrument_classes import SpectrometerControllerDummy, PPMSControllerDummy
-from PyQt5.QtCore import QObject, QThread, QTimer, pyqtSignal
+from ..experiment_manager.multithreading_instrument_classes import SpectrometerController
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 
 # noinspection PyUnresolvedReferences
@@ -74,7 +73,7 @@ class ExperimentManager(QObject):
     def create_NMR_thread(self) -> tuple[QThread, SpectrometerControllerDummy]:
         thread = QThread()
         # Create Worker instance for spectrometer
-        worker = SpectrometerControllerDummy()
+        worker = SpectrometerController()
         worker.moveToThread(thread)
         self.logger.info("NMR worker thread created")
         # Connect signals

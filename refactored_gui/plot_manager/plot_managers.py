@@ -50,6 +50,12 @@ class PyqtgraphPlotManager:
         self.plots = {k: {'plot_ref': plot_widgets[k],
                           'lines': self.initialise_lines(k, plot_widgets)} for k in plot_widgets.keys()}
 
+        # x-axis
+        self.fs = 800e6
+        self.Ts = 1/self.fs
+        self.N = 2 ** 16
+        self.xt = np.arange(0, self.N) * self.Ts
+
         self.initialise_plot_widgets()
 
     def initialise_plot_widgets(self) -> None:
@@ -59,7 +65,7 @@ class PyqtgraphPlotManager:
         for k in self.plots.keys():
             self.plots[k]['plot_ref'].setBackground("w")
             self.plots[k]['plot_ref'].setLabel("left", "signal", **styles)
-            self.plots[k]['plot_ref'].setLabel("bottom", "t (s)", **styles)
+            self.plots[k]['plot_ref'].setLabel("bottom", "t (us)", **styles)
 
         self.plots['average_time']['plot_ref'].setTitle("Averaged SDR14 signal", color='k')
         self.plots['last_time']['plot_ref'].setTitle("Last scan SDR14 signal", color='k')
@@ -70,4 +76,5 @@ class PyqtgraphPlotManager:
                 'ch2': plot_widgets[key].plot([], [], pen='b')}
 
     def update_plot(self, data: np.ndarray, plot: str, channel: str) -> None:
-        self.plots[plot]['lines'][channel].setData(data)
+        self.plots[plot]['lines'][channel].setData(self.xt, data)
+

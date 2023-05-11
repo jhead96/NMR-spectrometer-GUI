@@ -1,6 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot
 from refactored_gui.instrument_controllers.sdr14_controller import SDR14
-from refactored_gui.instrument_controllers.ppms_controller import PPMS
 from datetime import datetime
 from abc import ABC, abstractmethod
 import time
@@ -146,7 +145,7 @@ class SpectrometerController(SpectrometerThreadController, QObject, metaclass=Fi
             ch1_data, ch2_data = self.SDR14.MR_acquisition()
             self.data_out.emit(i + 1, ch1_data, ch2_data, self.save_dir)
             self.save_data(ch1_data, ch2_data, i + 1, seq_name)
-            time.sleep(0.5)
+            time.sleep(1)
 
         print("[NMR Thread] Dummy code finished")
         self.finished.emit()
@@ -160,7 +159,7 @@ class SpectrometerController(SpectrometerThreadController, QObject, metaclass=Fi
             elif key in ["TX_phase", "RX_phase"]:
                 register_number = self.SDR14.register_lookup[key]
                 mask = self.SDR14.register_mask[key]
-                self.SDR14.write_register(register_number, value, mask=mask)
+                #self.SDR14.write_register(register_number, value, mask=mask)
             else:
                 register_number = self.SDR14.register_lookup[key]
                 self.SDR14.write_register(register_number, value)
@@ -174,7 +173,7 @@ class SpectrometerController(SpectrometerThreadController, QObject, metaclass=Fi
 
     @pyqtSlot()
     def shutdown_thread(self) -> None:
-        print("[NMR Thread] Disconnecting SDR14")
+        self.SDR14.delete_control_unit()
         self.safe_to_close.emit()
 
 
@@ -206,7 +205,7 @@ class PPMSController(PPMSThreadController, QObject, metaclass=FinalMeta):
 
     def __init__(self):
         super().__init__()
-        self.PPMS = PPMS()
+        #self.PPMS = PPMS()
         self.save_dir = None
         print("[PPMS Thread] __init__()")
 

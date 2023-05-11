@@ -1,4 +1,4 @@
-from gui_pyqtgraph_11 import *
+from refactored_gui.gui_pyqtgraph_11 import *
 from run_PPMS_command_window import *
 
 import sys
@@ -10,14 +10,10 @@ import logging
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor
 
-# Instrument controllers
-from instrument_controllers.sdr14_controller import SDR14
-from instrument_controllers.ppms_controller import PPMS
-
 # Data handling objects
-from data_handling.sample import Sample
-from data_handling.sequence import Sequence
-from data_handling.command import NMRCommand, PPMSFieldCommand, PPMSTemperatureCommand
+from refactored_gui.data_handling.sample import Sample
+from refactored_gui.data_handling.sequence import Sequence
+from refactored_gui.data_handling.command import NMRCommand, PPMSFieldCommand, PPMSTemperatureCommand
 
 # Experiment management
 from refactored_gui.experiment_manager.experiment_manager import ExperimentManager

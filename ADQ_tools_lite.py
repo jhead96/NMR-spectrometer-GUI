@@ -76,6 +76,8 @@ class sdr14:
         ### Create additional objects for data recording ###
         self.stream_cfg_data = self.stream_config_struct()
 
+        return
+
     def set_global_quiet(self, setting, quiet=None):
         """
         Allows global quiet setting to be updated.
@@ -629,7 +631,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
         time.sleep(0.1)
         # Acquire data
         self.enable_dev()
-        time.sleep(1)
+        time.sleep(2)
         self.disable_dev()
 
         """while self.__api.ADQ_GetAcquiredAll(self.__cu, self.device_number) == 0:
@@ -859,6 +861,7 @@ api.ADQ_GetBoardProductName.restype = ct.c_char_p\n
 
     ### FOR TESTING ONLY ###
 
+x = sdr14()
 
 def expand():
     """
